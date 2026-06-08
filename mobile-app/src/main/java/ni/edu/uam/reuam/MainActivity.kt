@@ -4,7 +4,7 @@ import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
-import ni.edu.uam.reuam.presentation.home.HomeScreen
+import ni.edu.uam.reuam.navigation.AppNavigation
 import ni.edu.uam.reuam.ui.theme.ReUAMTheme
 
 class MainActivity : ComponentActivity() {
@@ -14,7 +14,7 @@ class MainActivity : ComponentActivity() {
 
         setContent {
             ReUAMTheme {
-                HomeScreen()
+                AppNavigation()
             }
         }
     }
