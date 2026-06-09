@@ -1,14 +1,16 @@
 package ni.edu.uam.reuam.navigation
 
 import androidx.compose.runtime.Composable
+import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
+import ni.edu.uam.reuam.presentation.articles.ArticleListScreen
+import ni.edu.uam.reuam.presentation.articles.PublishArticleScreen
 import ni.edu.uam.reuam.presentation.auth.LoginScreen
+import ni.edu.uam.reuam.presentation.auth.SplashScreen
 import ni.edu.uam.reuam.presentation.auth.WelcomeScreen
 import ni.edu.uam.reuam.presentation.home.HomeScreen
-import ni.edu.uam.reuam.presentation.articles.PublishArticleScreen
-import ni.edu.uam.reuam.presentation.auth.SplashScreen
 
 @Composable
 fun AppNavigation() {
@@ -48,6 +50,7 @@ fun AppNavigation() {
                         popUpTo(Routes.Welcome.route) {
                             inclusive = true
                         }
+                        launchSingleTop = true
                     }
                 }
             )
@@ -55,8 +58,24 @@ fun AppNavigation() {
 
         composable(Routes.Home.route) {
             HomeScreen(
+                currentRoute = Routes.Home.route,
+                onNavigate = { route ->
+                    navController.navigateSafely(route)
+                },
                 onPublishClick = {
-                    navController.navigate(Routes.PublishArticle.route)
+                    navController.navigateSafely(Routes.PublishArticle.route)
+                }
+            )
+        }
+
+        composable(Routes.ArticleList.route) {
+            ArticleListScreen(
+                currentRoute = Routes.ArticleList.route,
+                onNavigate = { route ->
+                    navController.navigateSafely(route)
+                },
+                onBack = {
+                    navController.popBackStack()
                 }
             )
         }
@@ -67,6 +86,15 @@ fun AppNavigation() {
                     navController.popBackStack()
                 }
             )
+        }
+    }
+}
+
+private fun NavHostController.navigateSafely(route: String) {
+    if (currentDestination?.route != route) {
+        navigate(route) {
+            launchSingleTop = true
+            restoreState = true
         }
     }
 }
