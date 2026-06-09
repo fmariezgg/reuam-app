@@ -3,7 +3,6 @@ package ni.edu.uam.reuam.presentation.home
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyRow
-import androidx.compose.foundation.lazy.grid.*
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
@@ -76,6 +75,38 @@ private val sampleArticles = listOf(
         "Laboratorio", ArticleType.PRESTAMO, ArticleStatus.DISPONIBLE, "Sofía V."),
 )
 
+// ── Grid manual 2 columnas (evita LazyVerticalGrid dentro de verticalScroll) ──
+
+@Composable
+private fun ArticlesGrid(articles: List<ArticleSample>) {
+    // Agrupa los artículos en filas de 2
+    val rows = articles.chunked(2)
+    Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+        rows.forEach { row ->
+            Row(
+                horizontalArrangement = Arrangement.spacedBy(12.dp),
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                row.forEach { article ->
+                    ArticleCard(
+                        imageUrl  = article.imageUrl,
+                        title     = article.title,
+                        category  = article.category,
+                        type      = article.type,
+                        status    = article.status,
+                        owner     = article.owner,
+                        modifier  = Modifier.weight(1f)
+                    )
+                }
+                // Si la fila tiene solo 1 elemento, rellena el espacio con un Box vacío
+                if (row.size == 1) {
+                    Box(modifier = Modifier.weight(1f))
+                }
+            }
+        }
+    }
+}
+
 // ── Pantalla ──────────────────────────────────────────────────────────────────
 
 @Composable
@@ -85,7 +116,7 @@ fun HomeScreen(
     onPublishClick: () -> Unit = {}
 ) {
     var activeCategory by remember { mutableStateOf("all") }
-    var searchQuery by remember { mutableStateOf("") }
+    var searchQuery    by remember { mutableStateOf("") }
 
     Scaffold(
         bottomBar = {
@@ -93,13 +124,11 @@ fun HomeScreen(
         },
         floatingActionButton = {
             FloatingActionButton(
-                onClick = onPublishClick,
+                onClick        = onPublishClick,
                 containerColor = ReUAMGreen,
-                contentColor = Color.White,
-                shape = CircleShape,
-                modifier = Modifier
-                    .size(56.dp)
-                    .offset(y = (-72).dp) // sube por encima del BottomBar
+                contentColor   = Color.White,
+                shape          = CircleShape,
+                modifier       = Modifier.size(56.dp)
             ) {
                 Icon(Icons.Filled.Add, "Publicar artículo", Modifier.size(28.dp))
             }
@@ -108,6 +137,7 @@ fun HomeScreen(
         containerColor = ReUAMBackground
     ) { paddingValues ->
 
+        // Un solo Column con verticalScroll — sin Lazy anidado
         Column(
             modifier = Modifier
                 .fillMaxSize()
@@ -115,7 +145,7 @@ fun HomeScreen(
                 .verticalScroll(rememberScrollState())
         ) {
 
-            // ── HEADER verde con gradiente ────────────────────────────────────
+            // ── HEADER verde ──────────────────────────────────────────────────
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -127,7 +157,6 @@ fun HomeScreen(
                     .padding(top = 48.dp, bottom = 24.dp)
             ) {
                 Column(verticalArrangement = Arrangement.spacedBy(20.dp)) {
-                    // Saludo + campanita
                     Row(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.SpaceBetween,
@@ -156,13 +185,11 @@ fun HomeScreen(
                                 modifier = Modifier.size(22.dp), tint = Color.White)
                         }
                     }
-
-                    // Barra de búsqueda
                     ReUAMSearchBar(
-                        query = searchQuery,
+                        query         = searchQuery,
                         onQueryChange = { searchQuery = it },
-                        placeholder = "Buscar artículos, libros, tecnología...",
-                        modifier = Modifier.fillMaxWidth()
+                        placeholder   = "Buscar artículos, libros, tecnología...",
+                        modifier      = Modifier.fillMaxWidth()
                     )
                 }
             }
@@ -181,10 +208,10 @@ fun HomeScreen(
                 LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     items(sampleCategories) { cat ->
                         CategoryChip(
-                            label = cat.label,
+                            label    = cat.label,
                             isActive = activeCategory == cat.id,
-                            onClick = { activeCategory = cat.id },
-                            icon = cat.icon
+                            onClick  = { activeCategory = cat.id },
+                            icon     = cat.icon
                         )
                     }
                 }
@@ -212,31 +239,14 @@ fun HomeScreen(
                     }
                 }
 
-                // Grid 2 columnas
                 val filteredArticles = if (activeCategory == "all") sampleArticles
-                else sampleArticles.filter { it.category.lowercase().contains(activeCategory) }
-
-                LazyVerticalGrid(
-                    columns = GridCells.Fixed(2),
-                    modifier = Modifier.height(
-                        // Altura aproximada: ceil(n/2) * (cardHeight + gap)
-                        ((filteredArticles.size + 1) / 2 * 300).dp
-                    ),
-                    horizontalArrangement = Arrangement.spacedBy(12.dp),
-                    verticalArrangement = Arrangement.spacedBy(12.dp),
-                    userScrollEnabled = false // el scroll lo maneja el Column externo
-                ) {
-                    items(filteredArticles) { article ->
-                        ArticleCard(
-                            imageUrl = article.imageUrl,
-                            title = article.title,
-                            category = article.category,
-                            type = article.type,
-                            status = article.status,
-                            owner = article.owner
-                        )
-                    }
+                else sampleArticles.filter {
+                    it.category.lowercase().contains(activeCategory)
                 }
+
+                // Grid manual — NO usa LazyVerticalGrid para evitar el conflicto
+                // de medición con verticalScroll
+                ArticlesGrid(articles = filteredArticles)
 
                 Spacer(modifier = Modifier.height(16.dp))
             }
