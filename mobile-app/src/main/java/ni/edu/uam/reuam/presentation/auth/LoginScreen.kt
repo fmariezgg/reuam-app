@@ -17,14 +17,35 @@ import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.viewmodel.compose.viewModel
 import ni.edu.uam.reuam.ui.theme.*
 
+// ─── Reemplaza este valor por tu Web Client ID de Firebase Console ───
+// Firebase Console → Project Settings → General → Your apps → Web API Key
+// O bien Firebase Console → Authentication → Sign-in method → Google → Web client ID
+private const val WEB_CLIENT_ID =
+    "980022219203-XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX.apps.googleusercontent.com"
+
 @Composable
-fun LoginScreen(onLoginSuccess: () -> Unit) {
+fun LoginScreen(
+    onLoginSuccess: () -> Unit,
+    authViewModel: AuthViewModel = viewModel()
+) {
+    val context = LocalContext.current
+    val uiState by authViewModel.uiState.collectAsState()
+
+    // Cuando el login es exitoso, navegar
+    LaunchedEffect(uiState) {
+        if (uiState is AuthUiState.Success) {
+            authViewModel.resetState()
+            onLoginSuccess()
+        }
+    }
 
     val infiniteTransition = rememberInfiniteTransition(label = "login_anim")
     val logoWobble by infiniteTransition.animateFloat(
@@ -119,9 +140,12 @@ fun LoginScreen(onLoginSuccess: () -> Unit) {
                         )
                     }
 
-                    // Botón Google
+                    // Botón Google — muestra spinner mientras carga
                     OutlinedButton(
-                        onClick = onLoginSuccess,
+                        onClick = {
+                            authViewModel.signInWithGoogle(context, WEB_CLIENT_ID)
+                        },
+                        enabled = uiState !is AuthUiState.Loading,
                         modifier = Modifier
                             .fillMaxWidth()
                             .height(56.dp),
@@ -130,23 +154,41 @@ fun LoginScreen(onLoginSuccess: () -> Unit) {
                             containerColor = ReUAMSurface,
                             contentColor = ReUAMTextPrimary
                         ),
-                        border = ButtonDefaults.outlinedButtonBorder.copy(
-                            width = 2.dp
-                        )
+                        border = ButtonDefaults.outlinedButtonBorder.copy(width = 2.dp)
                     ) {
-                        Row(
-                            horizontalArrangement = Arrangement.spacedBy(12.dp),
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            // Logo Google SVG en texto (placeholder — reemplazar con vector real)
-                            Text("G", fontSize = 20.sp, fontWeight = FontWeight.Bold,
-                                color = Color(0xFF4285F4))
-                            Text(
-                                "Continuar con Google",
-                                style = MaterialTheme.typography.labelLarge,
-                                color = ReUAMTextPrimary
+                        if (uiState is AuthUiState.Loading) {
+                            CircularProgressIndicator(
+                                modifier = Modifier.size(22.dp),
+                                color = ReUAMGreen,
+                                strokeWidth = 2.dp
                             )
+                        } else {
+                            Row(
+                                horizontalArrangement = Arrangement.spacedBy(12.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Text(
+                                    "G", fontSize = 20.sp, fontWeight = FontWeight.Bold,
+                                    color = Color(0xFF4285F4)
+                                )
+                                Text(
+                                    "Continuar con Google",
+                                    style = MaterialTheme.typography.labelLarge,
+                                    color = ReUAMTextPrimary
+                                )
+                            }
                         }
+                    }
+
+                    // Mensaje de error (si hay)
+                    if (uiState is AuthUiState.Error) {
+                        Text(
+                            text = (uiState as AuthUiState.Error).message,
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.error,
+                            textAlign = TextAlign.Center,
+                            modifier = Modifier.fillMaxWidth()
+                        )
                     }
 
                     // Aviso de seguridad
@@ -160,7 +202,9 @@ fun LoginScreen(onLoginSuccess: () -> Unit) {
                     ) {
                         Icon(
                             Icons.Filled.Shield, null,
-                            modifier = Modifier.size(18.dp).padding(top = 2.dp),
+                            modifier = Modifier
+                                .size(18.dp)
+                                .padding(top = 2.dp),
                             tint = ReUAMGreen
                         )
                         Text(
