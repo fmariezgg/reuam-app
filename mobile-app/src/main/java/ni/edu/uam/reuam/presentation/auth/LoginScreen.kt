@@ -25,11 +25,10 @@ import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import ni.edu.uam.reuam.ui.theme.*
 
-// ─── Reemplaza este valor por tu Web Client ID de Firebase Console ───
 // Firebase Console → Project Settings → General → Your apps → Web API Key
 // O bien Firebase Console → Authentication → Sign-in method → Google → Web client ID
 private const val WEB_CLIENT_ID =
-    "980022219203-XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX.apps.googleusercontent.com"
+    "980022219203-t97g3dsp43kl5m691ctv9d7rs2vvj7ip.apps.googleusercontent.com"
 
 @Composable
 fun LoginScreen(
