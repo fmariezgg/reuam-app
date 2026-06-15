@@ -1,0 +1,584 @@
+openapi: "3.0.3"
+info:
+  title: "ReUAM API"
+  description: "REST API para reutilizacion, intercambio, donacion, prestamo y venta simbolica de articulos academicos dentro de UAM."
+  version: "1.0.0"
+servers:
+  - url: "http://localhost:8080"
+security:
+  - FirebaseBearerAuth: []
+paths:
+  /api/v1/health:
+    get:
+      security: []
+      tags: [System]
+      responses:
+        "200":
+          description: "API disponible"
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: ok
+  /api/v1/categories:
+    get:
+      security: []
+      tags: [Categories]
+      responses:
+        "200":
+          description: "Categorias disponibles"
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/CategoryResponse"
+    post:
+      tags: [Categories]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateCategoryRequest"
+      responses:
+        "201":
+          description: "Categoria creada"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CategoryResponse"
+        default:
+          $ref: "#/components/responses/Error"
+  /api/v1/profiles/me:
+    get:
+      tags: [Profiles]
+      responses:
+        "200":
+          description: "Perfil autenticado"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UserProfileResponse"
+        default:
+          $ref: "#/components/responses/Error"
+    put:
+      tags: [Profiles]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpsertUserProfileRequest"
+      responses:
+        "200":
+          description: "Perfil creado o actualizado"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UserProfileResponse"
+        default:
+          $ref: "#/components/responses/Error"
+  /api/v1/profiles/me/photo:
+    patch:
+      tags: [Profiles]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateProfilePhotoRequest"
+      responses:
+        "200":
+          description: "Foto de perfil actualizada"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UserProfileResponse"
+        default:
+          $ref: "#/components/responses/Error"
+  /api/v1/items:
+    get:
+      security: []
+      tags: [Items]
+      responses:
+        "200":
+          description: "Articulos disponibles"
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/ItemResponse"
+    post:
+      tags: [Items]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateItemRequest"
+      responses:
+        "201":
+          description: "Articulo creado"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ItemResponse"
+        default:
+          $ref: "#/components/responses/Error"
+  /api/v1/items/{id}:
+    get:
+      security: []
+      tags: [Items]
+      parameters:
+        - $ref: "#/components/parameters/UuidPathId"
+      responses:
+        "200":
+          description: "Detalle de articulo"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ItemResponse"
+        default:
+          $ref: "#/components/responses/Error"
+    put:
+      tags: [Items]
+      parameters:
+        - $ref: "#/components/parameters/UuidPathId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateItemRequest"
+      responses:
+        "200":
+          description: "Articulo actualizado"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ItemResponse"
+        default:
+          $ref: "#/components/responses/Error"
+    delete:
+      tags: [Items]
+      parameters:
+        - $ref: "#/components/parameters/UuidPathId"
+      responses:
+        "204":
+          description: "Articulo eliminado"
+        default:
+          $ref: "#/components/responses/Error"
+  /api/v1/users/me/items:
+    get:
+      tags: [Items]
+      responses:
+        "200":
+          description: "Articulos del usuario autenticado"
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/ItemResponse"
+        default:
+          $ref: "#/components/responses/Error"
+  /api/v1/exchange-requests:
+    post:
+      tags: [ExchangeRequests]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateExchangeRequestRequest"
+      responses:
+        "201":
+          description: "Solicitud creada"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ExchangeRequestResponse"
+        default:
+          $ref: "#/components/responses/Error"
+  /api/v1/exchange-requests/sent:
+    get:
+      tags: [ExchangeRequests]
+      responses:
+        "200":
+          description: "Solicitudes enviadas"
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/ExchangeRequestResponse"
+        default:
+          $ref: "#/components/responses/Error"
+  /api/v1/exchange-requests/received:
+    get:
+      tags: [ExchangeRequests]
+      responses:
+        "200":
+          description: "Solicitudes recibidas"
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/ExchangeRequestResponse"
+        default:
+          $ref: "#/components/responses/Error"
+  /api/v1/exchange-requests/{id}/status:
+    patch:
+      tags: [ExchangeRequests]
+      parameters:
+        - $ref: "#/components/parameters/UuidPathId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateExchangeRequestStatusRequest"
+      responses:
+        "200":
+          description: "Estado actualizado"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ExchangeRequestResponse"
+        default:
+          $ref: "#/components/responses/Error"
+  /api/v1/exchange-requests/{id}/cancel:
+    post:
+      tags: [ExchangeRequests]
+      parameters:
+        - $ref: "#/components/parameters/UuidPathId"
+      responses:
+        "200":
+          description: "Solicitud cancelada"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ExchangeRequestResponse"
+        default:
+          $ref: "#/components/responses/Error"
+components:
+  securitySchemes:
+    FirebaseBearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: "Firebase ID token"
+  parameters:
+    UuidPathId:
+      name: id
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+  responses:
+    Error:
+      description: "Error de API"
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/BackendErrorResponse"
+  schemas:
+    BackendErrorResponse:
+      type: object
+      required: [code, detail, field_errors]
+      properties:
+        code:
+          type: string
+        detail:
+          type: string
+        field_errors:
+          type: object
+          additionalProperties:
+            type: string
+    UserProfileResponse:
+      type: object
+      required: [id, firebaseUid, displayName, createdAt, updatedAt]
+      properties:
+        id:
+          type: string
+          format: uuid
+          description: "Internal ReUAM user UUID"
+        firebaseUid:
+          type: string
+          description: "Firebase Auth uid"
+        email:
+          type: string
+          nullable: true
+        displayName:
+          type: string
+        photoUrl:
+          type: string
+          nullable: true
+        phoneNumber:
+          type: string
+          nullable: true
+        career:
+          type: string
+          nullable: true
+        studentCode:
+          type: string
+          nullable: true
+        bio:
+          type: string
+          nullable: true
+        createdAt:
+          type: integer
+          format: int64
+        updatedAt:
+          type: integer
+          format: int64
+    UpsertUserProfileRequest:
+      type: object
+      properties:
+        email:
+          type: string
+          nullable: true
+        displayName:
+          type: string
+          nullable: true
+        photoUrl:
+          type: string
+          nullable: true
+        phoneNumber:
+          type: string
+          nullable: true
+        career:
+          type: string
+          nullable: true
+        studentCode:
+          type: string
+          nullable: true
+        bio:
+          type: string
+          nullable: true
+    UpdateProfilePhotoRequest:
+      type: object
+      required: [photoUrl]
+      properties:
+        photoUrl:
+          type: string
+    CategoryResponse:
+      type: object
+      required: [id, name, slug, createdAt]
+      properties:
+        id:
+          type: integer
+          format: int32
+        name:
+          type: string
+        slug:
+          type: string
+        createdAt:
+          type: integer
+          format: int64
+    CreateCategoryRequest:
+      type: object
+      required: [name]
+      properties:
+        name:
+          type: string
+    ItemTransactionType:
+      type: string
+      enum: [DONATION, EXCHANGE, LOAN, SYMBOLIC_SALE]
+    ItemCondition:
+      type: string
+      enum: [NEW, LIKE_NEW, GOOD, FAIR, NEEDS_REPAIR]
+    ItemStatus:
+      type: string
+      enum: [AVAILABLE, RESERVED, COMPLETED, INACTIVE]
+    ExchangeRequestStatus:
+      type: string
+      enum: [PENDING, ACCEPTED, REJECTED, CANCELLED, COMPLETED]
+    ItemPhotoInput:
+      type: object
+      required: [storagePath]
+      properties:
+        storagePath:
+          type: string
+        downloadUrl:
+          type: string
+          nullable: true
+        sortOrder:
+          type: integer
+          format: int32
+          default: 0
+    ItemPhotoResponse:
+      type: object
+      required: [id, itemId, storagePath, sortOrder, createdAt]
+      properties:
+        id:
+          type: string
+          format: uuid
+        itemId:
+          type: string
+          format: uuid
+        storagePath:
+          type: string
+        downloadUrl:
+          type: string
+          nullable: true
+        sortOrder:
+          type: integer
+          format: int32
+        createdAt:
+          type: integer
+          format: int64
+    CreateItemRequest:
+      type: object
+      required: [title, description, condition, transactionType]
+      properties:
+        title:
+          type: string
+        description:
+          type: string
+        categoryId:
+          type: integer
+          format: int32
+          nullable: true
+        condition:
+          $ref: "#/components/schemas/ItemCondition"
+        transactionType:
+          $ref: "#/components/schemas/ItemTransactionType"
+        priceCents:
+          type: integer
+          format: int64
+          nullable: true
+        location:
+          type: string
+          nullable: true
+        photos:
+          type: array
+          items:
+            $ref: "#/components/schemas/ItemPhotoInput"
+          default: []
+    UpdateItemRequest:
+      type: object
+      properties:
+        title:
+          type: string
+          nullable: true
+        description:
+          type: string
+          nullable: true
+        categoryId:
+          type: integer
+          format: int32
+          nullable: true
+        condition:
+          $ref: "#/components/schemas/ItemCondition"
+        transactionType:
+          $ref: "#/components/schemas/ItemTransactionType"
+        priceCents:
+          type: integer
+          format: int64
+          nullable: true
+        status:
+          $ref: "#/components/schemas/ItemStatus"
+        location:
+          type: string
+          nullable: true
+        photos:
+          type: array
+          nullable: true
+          items:
+            $ref: "#/components/schemas/ItemPhotoInput"
+    ItemResponse:
+      type: object
+      required: [id, ownerId, title, description, condition, transactionType, status, createdAt, updatedAt, photos]
+      properties:
+        id:
+          type: string
+          format: uuid
+        ownerId:
+          type: string
+        title:
+          type: string
+        description:
+          type: string
+        categoryId:
+          type: integer
+          format: int32
+          nullable: true
+        condition:
+          $ref: "#/components/schemas/ItemCondition"
+        transactionType:
+          $ref: "#/components/schemas/ItemTransactionType"
+        priceCents:
+          type: integer
+          format: int64
+          nullable: true
+        status:
+          $ref: "#/components/schemas/ItemStatus"
+        location:
+          type: string
+          nullable: true
+        createdAt:
+          type: integer
+          format: int64
+        updatedAt:
+          type: integer
+          format: int64
+        photos:
+          type: array
+          items:
+            $ref: "#/components/schemas/ItemPhotoResponse"
+    CreateExchangeRequestRequest:
+      type: object
+      required: [itemId]
+      properties:
+        itemId:
+          type: string
+          format: uuid
+        offerItemId:
+          type: string
+          format: uuid
+          nullable: true
+        message:
+          type: string
+          nullable: true
+    UpdateExchangeRequestStatusRequest:
+      type: object
+      required: [status]
+      properties:
+        status:
+          $ref: "#/components/schemas/ExchangeRequestStatus"
+    ExchangeRequestResponse:
+      type: object
+      required: [id, itemId, requesterId, ownerId, status, createdAt, updatedAt]
+      properties:
+        id:
+          type: string
+          format: uuid
+        itemId:
+          type: string
+          format: uuid
+        requesterId:
+          type: string
+        ownerId:
+          type: string
+        offerItemId:
+          type: string
+          format: uuid
+          nullable: true
+        message:
+          type: string
+          nullable: true
+        status:
+          $ref: "#/components/schemas/ExchangeRequestStatus"
+        createdAt:
+          type: integer
+          format: int64
+        updatedAt:
+          type: integer
+          format: int64
