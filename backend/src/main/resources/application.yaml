@@ -1,0 +1,15 @@
+ktor:
+  deployment:
+    port: 8080
+  application:
+    modules:
+      - ni.uam.edu.plugins.HttpKt.configureHttp
+      - ni.uam.edu.plugins.SerializationKt.configureSerialization
+      - ni.uam.edu.plugins.SecurityKt.configureSecurity
+      - ni.uam.edu.plugins.ExceptionsKt.configureExceptions
+      - ni.uam.edu.plugins.DatabaseKt.configureDatabase
+
+database:
+  url: "r2dbc:h2:file:///./reuam;MODE=PostgreSQL;DATABASE_TO_UPPER=false"
+  user: "root"
+  password: ""
