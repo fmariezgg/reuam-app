@@ -5,10 +5,12 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.platform.LocalContext
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavGraph.Companion.findStartDestination
+import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
+import androidx.navigation.navArgument
 import ni.edu.uam.reuam.presentation.articles.ArticleListScreen
 import ni.edu.uam.reuam.presentation.articles.PublishArticleScreen
 import ni.edu.uam.reuam.presentation.auth.AuthViewModel
@@ -82,7 +84,8 @@ fun AppNavigation() {
             HomeScreen(
                 currentRoute   = currentRoute,
                 onNavigate     = { navigateTab(it) },
-                onPublishClick = { navController.navigate(Routes.PublishArticle.route) }
+                onPublishClick = { navController.navigate(Routes.PublishArticle.route) },
+                onArticleClick = { itemId -> navController.navigate(Routes.ArticleDetail.createRoute(itemId)) }
             )
         }
 
@@ -90,6 +93,17 @@ fun AppNavigation() {
             ArticleListScreen(
                 onBackClick = { navController.popBackStack() }
             )
+        }
+
+        // Placeholder temporal — la pantalla real de detalle llega en la
+        // Fase 4. Por ahora solo registra la ruta con argumento para que
+        // el clic en una tarjeta de artículo no provoque un crash de
+        // "ruta no encontrada".
+        composable(
+            route = Routes.ArticleDetail.route,
+            arguments = listOf(navArgument("itemId") { type = NavType.StringType })
+        ) {
+            ArticleListScreen(onBackClick = { navController.popBackStack() })
         }
 
         composable(Routes.PublishArticle.route) {
