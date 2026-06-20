@@ -5,9 +5,11 @@ sealed class Routes(val route: String) {
     data object Welcome         : Routes("welcome")
     data object Login           : Routes("login")
     data object Home            : Routes("home")
-    data object ArticleList     : Routes("article_list")   // ← NUEVO
+    data object ArticleList     : Routes("article_list")
     data object PublishArticle  : Routes("publish_article")
-    data object ArticleDetail   : Routes("article_detail")
+    data object ArticleDetail   : Routes("article_detail/{itemId}") {
+        fun createRoute(itemId: String) = "article_detail/$itemId"
+    }
     data object Requests        : Routes("requests")
     data object Profile         : Routes("profile")
     data object MyPublications  : Routes("my_publications")

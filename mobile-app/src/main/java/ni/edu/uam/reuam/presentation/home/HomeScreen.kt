@@ -17,69 +17,25 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.viewmodel.compose.viewModel
+import ni.edu.uam.reuam.data.ApiResult
+import ni.edu.uam.reuam.data.remote.dto.CategoryResponse
 import ni.edu.uam.reuam.navigation.Routes
 import ni.edu.uam.reuam.presentation.components.*
 import ni.edu.uam.reuam.ui.theme.*
 
-// ── Datos de muestra ──────────────────────────────────────────────────────────
-
-private data class Category(val id: String, val label: String, val icon: ImageVector)
-
-private val sampleCategories = listOf(
-    Category("all",        "Todos",       Icons.Outlined.MoreHoriz),
-    Category("books",      "Libros",      Icons.Outlined.MenuBook),
-    Category("tech",       "Tecnología",  Icons.Outlined.Laptop),
-    Category("stationery", "Papelería",   Icons.Outlined.Edit),
-    Category("uniforms",   "Uniformes",   Icons.Outlined.Checkroom),
-    Category("lab",        "Laboratorio", Icons.Outlined.Science),
-)
-
-private data class ArticleSample(
-    val id: Int,
-    val imageUrl: String,
-    val title: String,
-    val category: String,
-    val type: ArticleType,
-    val status: ArticleStatus,
-    val owner: String
-)
-
-private val sampleArticles = listOf(
-    ArticleSample(1,
-        "https://images.unsplash.com/photo-1598690042638-1b9844b7ef83?w=400",
-        "Calculadora científica Casio FX-991",
-        "Tecnología", ArticleType.PRESTAMO, ArticleStatus.DISPONIBLE, "Carlos M."),
-    ArticleSample(2,
-        "https://images.unsplash.com/photo-1676302447092-14a103558511?w=400",
-        "Libro de Cálculo II - James Stewart",
-        "Libros", ArticleType.DONACION, ArticleStatus.DISPONIBLE, "Ana R."),
-    ArticleSample(3,
-        "https://images.unsplash.com/photo-1580982172477-9373ff52ae43?w=400",
-        "Bata de laboratorio blanca talla M",
-        "Laboratorio", ArticleType.VENTA_SIMBOLICA, ArticleStatus.RESERVADO, "Luis P."),
-    ArticleSample(4,
-        "https://images.unsplash.com/photo-1615988938302-bd2a5a7023bc?w=400",
-        "Pack de marcadores y folders",
-        "Papelería", ArticleType.INTERCAMBIO, ArticleStatus.DISPONIBLE, "María G."),
-    ArticleSample(5,
-        "https://images.unsplash.com/photo-1492107376256-4026437926cd?w=400",
-        "Cable USB-C nuevo en caja",
-        "Tecnología", ArticleType.DONACION, ArticleStatus.ENTREGADO, "Pedro S."),
-    ArticleSample(6,
-        "https://images.unsplash.com/photo-1580982167011-2a54f6e440ca?w=400",
-        "Kit de pipetas y tubos de ensayo",
-        "Laboratorio", ArticleType.PRESTAMO, ArticleStatus.DISPONIBLE, "Sofía V."),
-)
+// ── Categoría "Todos" sintética, se agrega siempre al inicio del filtro ──────
+// El backend no manda un id especial para "Todos"; se representa con un id
+// que ninguna categoría real puede tener, y se maneja aparte en filterArticles().
+private const val ALL_CATEGORIES_ID = -1
 
 // ── Grid manual 2 columnas (evita LazyVerticalGrid dentro de verticalScroll) ──
 
 @Composable
-private fun ArticlesGrid(articles: List<ArticleSample>) {
-    // Agrupa los artículos en filas de 2
+private fun ArticlesGrid(articles: List<HomeArticleUi>, onArticleClick: (String) -> Unit) {
     val rows = articles.chunked(2)
     Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
         rows.forEach { row ->
@@ -91,14 +47,14 @@ private fun ArticlesGrid(articles: List<ArticleSample>) {
                     ArticleCard(
                         imageUrl  = article.imageUrl,
                         title     = article.title,
-                        category  = article.category,
+                        category  = article.categoryLabel,
                         type      = article.type,
                         status    = article.status,
-                        owner     = article.owner,
+                        owner     = "",
+                        onClick   = { onArticleClick(article.id) },
                         modifier  = Modifier.weight(1f)
                     )
                 }
-                // Si la fila tiene solo 1 elemento, rellena el espacio con un Box vacío
                 if (row.size == 1) {
                     Box(modifier = Modifier.weight(1f))
                 }
@@ -113,10 +69,14 @@ private fun ArticlesGrid(articles: List<ArticleSample>) {
 fun HomeScreen(
     currentRoute: String = Routes.Home.route,
     onNavigate: (String) -> Unit = {},
-    onPublishClick: () -> Unit = {}
+    onPublishClick: () -> Unit = {},
+    onArticleClick: (String) -> Unit = {},
+    viewModel: HomeViewModel = viewModel(),
 ) {
-    var activeCategory by remember { mutableStateOf("all") }
-    var searchQuery    by remember { mutableStateOf("") }
+    var activeCategoryId by remember { mutableStateOf(ALL_CATEGORIES_ID) }
+    var searchQuery by remember { mutableStateOf("") }
+
+    val uiState by viewModel.uiState.collectAsState()
 
     Scaffold(
         bottomBar = {
@@ -137,119 +97,198 @@ fun HomeScreen(
         containerColor = ReUAMBackground
     ) { paddingValues ->
 
-        // Un solo Column con verticalScroll — sin Lazy anidado
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(paddingValues)
-                .verticalScroll(rememberScrollState())
-        ) {
-
-            // ── HEADER verde ──────────────────────────────────────────────────
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .background(
-                        Brush.linearGradient(listOf(ReUAMGreen, Color(0xFF1B5E20))),
-                        RoundedCornerShape(bottomStart = 24.dp, bottomEnd = 24.dp)
-                    )
-                    .padding(horizontal = 24.dp)
-                    .padding(top = 48.dp, bottom = 24.dp)
+        when (val state = uiState) {
+            is ApiResult.Loading -> Box(
+                modifier = Modifier.fillMaxSize().padding(paddingValues)
             ) {
-                Column(verticalArrangement = Arrangement.spacedBy(20.dp)) {
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Column {
-                            Text(
-                                "Hola, Fátima 👋",
-                                fontSize = 22.sp,
-                                fontWeight = FontWeight.Bold,
-                                color = Color.White
-                            )
-                            Text(
-                                "¿Qué te gustaría reutilizar hoy?",
-                                style = MaterialTheme.typography.bodyMedium,
-                                color = ReUAMGreenLight
-                            )
-                        }
-                        IconButton(
-                            onClick = {},
-                            modifier = Modifier
-                                .size(40.dp)
-                                .background(Color.White.copy(alpha = 0.2f), CircleShape)
-                        ) {
-                            Icon(Icons.Outlined.Notifications, null,
-                                modifier = Modifier.size(22.dp), tint = Color.White)
-                        }
-                    }
-                    ReUAMSearchBar(
-                        query         = searchQuery,
-                        onQueryChange = { searchQuery = it },
-                        placeholder   = "Buscar artículos, libros, tecnología...",
-                        modifier      = Modifier.fillMaxWidth()
-                    )
-                }
+                LoadingContent(message = "Cargando artículos...")
             }
 
-            // ── CATEGORÍAS ────────────────────────────────────────────────────
-            Column(
-                modifier = Modifier.padding(horizontal = 24.dp, vertical = 20.dp),
-                verticalArrangement = Arrangement.spacedBy(12.dp)
+            is ApiResult.Error -> Box(
+                modifier = Modifier.fillMaxSize().padding(paddingValues)
             ) {
-                Text(
-                    "Categorías",
-                    fontSize = 17.sp,
-                    fontWeight = FontWeight.SemiBold,
-                    color = ReUAMTextPrimary
+                ErrorContent(
+                    message = state.message,
+                    onRetry = { viewModel.loadHome() }
                 )
-                LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    items(sampleCategories) { cat ->
-                        CategoryChip(
-                            label    = cat.label,
-                            isActive = activeCategory == cat.id,
-                            onClick  = { activeCategory = cat.id },
-                            icon     = cat.icon
-                        )
-                    }
-                }
             }
 
-            // ── ARTÍCULOS RECIENTES ───────────────────────────────────────────
-            Column(
-                modifier = Modifier.padding(horizontal = 24.dp),
-                verticalArrangement = Arrangement.spacedBy(12.dp)
-            ) {
+            is ApiResult.Success -> HomeContent(
+                paddingValues = paddingValues,
+                categories = state.data.categories,
+                articles = state.data.articles,
+                activeCategoryId = activeCategoryId,
+                onCategorySelected = { activeCategoryId = it },
+                searchQuery = searchQuery,
+                onSearchQueryChange = { searchQuery = it },
+                onSeeAllClick = { onNavigate(Routes.ArticleList.route) },
+                onArticleClick = onArticleClick,
+            )
+        }
+    }
+}
+
+@Composable
+private fun HomeContent(
+    paddingValues: PaddingValues,
+    categories: List<CategoryResponse>,
+    articles: List<HomeArticleUi>,
+    activeCategoryId: Int,
+    onCategorySelected: (Int) -> Unit,
+    searchQuery: String,
+    onSearchQueryChange: (String) -> Unit,
+    onSeeAllClick: () -> Unit,
+    onArticleClick: (String) -> Unit,
+) {
+    val filteredArticles = remember(articles, activeCategoryId, searchQuery) {
+        filterArticles(articles, categories, activeCategoryId, searchQuery)
+    }
+
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(paddingValues)
+            .verticalScroll(rememberScrollState())
+    ) {
+
+        // ── HEADER verde ──────────────────────────────────────────────────
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .background(
+                    Brush.linearGradient(listOf(ReUAMGreen, Color(0xFF1B5E20))),
+                    RoundedCornerShape(bottomStart = 24.dp, bottomEnd = 24.dp)
+                )
+                .padding(horizontal = 24.dp)
+                .padding(top = 48.dp, bottom = 24.dp)
+        ) {
+            Column(verticalArrangement = Arrangement.spacedBy(20.dp)) {
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Text(
-                        "Artículos recientes",
-                        fontSize = 17.sp,
-                        fontWeight = FontWeight.SemiBold,
-                        color = ReUAMTextPrimary
-                    )
-                    TextButton(onClick = { onNavigate(Routes.ArticleList.route) }) {
-                        Text("Ver todos", color = ReUAMGreen,
-                            style = MaterialTheme.typography.labelLarge)
+                    Column {
+                        Text(
+                            "Hola 👋",
+                            fontSize = 22.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = Color.White
+                        )
+                        Text(
+                            "¿Qué te gustaría reutilizar hoy?",
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = ReUAMGreenLight
+                        )
+                    }
+                    IconButton(
+                        onClick = {},
+                        modifier = Modifier
+                            .size(40.dp)
+                            .background(Color.White.copy(alpha = 0.2f), CircleShape)
+                    ) {
+                        Icon(Icons.Outlined.Notifications, null,
+                            modifier = Modifier.size(22.dp), tint = Color.White)
                     }
                 }
-
-                val filteredArticles = if (activeCategory == "all") sampleArticles
-                else sampleArticles.filter {
-                    it.category.lowercase().contains(activeCategory)
-                }
-
-                // Grid manual — NO usa LazyVerticalGrid para evitar el conflicto
-                // de medición con verticalScroll
-                ArticlesGrid(articles = filteredArticles)
-
-                Spacer(modifier = Modifier.height(16.dp))
+                ReUAMSearchBar(
+                    query         = searchQuery,
+                    onQueryChange = onSearchQueryChange,
+                    placeholder   = "Buscar artículos, libros, tecnología...",
+                    modifier      = Modifier.fillMaxWidth()
+                )
             }
         }
+
+        // ── CATEGORÍAS ────────────────────────────────────────────────────
+        Column(
+            modifier = Modifier.padding(horizontal = 24.dp, vertical = 20.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            Text(
+                "Categorías",
+                fontSize = 17.sp,
+                fontWeight = FontWeight.SemiBold,
+                color = ReUAMTextPrimary
+            )
+            LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                item {
+                    CategoryChip(
+                        label    = "Todos",
+                        isActive = activeCategoryId == ALL_CATEGORIES_ID,
+                        onClick  = { onCategorySelected(ALL_CATEGORIES_ID) },
+                        icon     = Icons.Outlined.MoreHoriz
+                    )
+                }
+                items(categories) { cat ->
+                    CategoryChip(
+                        label    = cat.name,
+                        isActive = activeCategoryId == cat.id,
+                        onClick  = { onCategorySelected(cat.id) },
+                        icon     = Icons.Outlined.Category
+                    )
+                }
+            }
+        }
+
+        // ── ARTÍCULOS RECIENTES ───────────────────────────────────────────
+        Column(
+            modifier = Modifier.padding(horizontal = 24.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    "Artículos recientes",
+                    fontSize = 17.sp,
+                    fontWeight = FontWeight.SemiBold,
+                    color = ReUAMTextPrimary
+                )
+                TextButton(onClick = onSeeAllClick) {
+                    Text("Ver todos", color = ReUAMGreen,
+                        style = MaterialTheme.typography.labelLarge)
+                }
+            }
+
+            if (filteredArticles.isEmpty()) {
+                EmptyContent(
+                    title = "Sin artículos por aquí",
+                    message = if (searchQuery.isBlank()) {
+                        "Todavía no hay artículos publicados en esta categoría. ¡Sé el primero en publicar uno!"
+                    } else {
+                        "No encontramos artículos que coincidan con \"$searchQuery\"."
+                    }
+                )
+            } else {
+                // Grid manual — NO usa LazyVerticalGrid para evitar el conflicto
+                // de medición con verticalScroll
+                ArticlesGrid(articles = filteredArticles, onArticleClick = onArticleClick)
+            }
+
+            Spacer(modifier = Modifier.height(16.dp))
+        }
+    }
+}
+
+private fun filterArticles(
+    articles: List<HomeArticleUi>,
+    categories: List<CategoryResponse>,
+    activeCategoryId: Int,
+    searchQuery: String,
+): List<HomeArticleUi> {
+    val categoryFiltered = if (activeCategoryId == ALL_CATEGORIES_ID) {
+        articles
+    } else {
+        val categoryName = categories.firstOrNull { it.id == activeCategoryId }?.name
+        articles.filter { it.categoryLabel == categoryName }
+    }
+
+    if (searchQuery.isBlank()) return categoryFiltered
+
+    return categoryFiltered.filter {
+        it.title.contains(searchQuery, ignoreCase = true)
     }
 }
