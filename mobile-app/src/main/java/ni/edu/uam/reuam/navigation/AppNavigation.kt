@@ -2,6 +2,7 @@ package ni.edu.uam.reuam.navigation
 
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.ui.platform.LocalContext
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavGraph.Companion.findStartDestination
 import androidx.navigation.compose.NavHost
@@ -15,6 +16,7 @@ import ni.edu.uam.reuam.presentation.auth.LoginScreen
 import ni.edu.uam.reuam.presentation.auth.SplashScreen
 import ni.edu.uam.reuam.presentation.auth.WelcomeScreen
 import ni.edu.uam.reuam.presentation.home.HomeScreen
+import ni.edu.uam.reuam.presentation.profile.ProfileScreen
 
 @Composable
 fun AppNavigation() {
@@ -101,7 +103,15 @@ fun AppNavigation() {
         }
 
         composable(Routes.Profile.route) {
-            ArticleListScreen(onBackClick = { navController.popBackStack() })
+            val context = LocalContext.current
+            ProfileScreen(
+                onLogoutClick = {
+                    authViewModel.signOut(context)
+                    navController.navigate(Routes.Welcome.route) {
+                        popUpTo(0) { inclusive = true }
+                    }
+                }
+            )
         }
     }
 }
