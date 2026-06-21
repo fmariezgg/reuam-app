@@ -12,6 +12,7 @@ import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
 import ni.edu.uam.reuam.presentation.articles.ArticleListScreen
+import ni.edu.uam.reuam.presentation.articles.ItemDetailScreen
 import ni.edu.uam.reuam.presentation.articles.PublishArticleScreen
 import ni.edu.uam.reuam.presentation.auth.AuthViewModel
 import ni.edu.uam.reuam.presentation.auth.LoginScreen
@@ -80,12 +81,18 @@ fun AppNavigation() {
             )
         }
 
-        composable(Routes.Home.route) {
+        composable(Routes.Home.route) { backStackEntry ->
+            // Si PublishArticleScreen señaló "refresh" al volver, recarga
+            // Home una vez y limpia la señal para no recargar en loop.
+            val shouldRefresh = backStackEntry.savedStateHandle
+                .remove<Boolean>("should_refresh_home") ?: false
+
             HomeScreen(
                 currentRoute   = currentRoute,
                 onNavigate     = { navigateTab(it) },
                 onPublishClick = { navController.navigate(Routes.PublishArticle.route) },
-                onArticleClick = { itemId -> navController.navigate(Routes.ArticleDetail.createRoute(itemId)) }
+                onArticleClick = { itemId -> navController.navigate(Routes.ArticleDetail.createRoute(itemId)) },
+                shouldRefresh = shouldRefresh,
             )
         }
 
@@ -95,20 +102,30 @@ fun AppNavigation() {
             )
         }
 
-        // Placeholder temporal — la pantalla real de detalle llega en la
-        // Fase 4. Por ahora solo registra la ruta con argumento para que
-        // el clic en una tarjeta de artículo no provoque un crash de
-        // "ruta no encontrada".
+        // Detalle real de artículo (Fase 4). El click en "Solicitar" navega
+        // a Requests por ahora — la creación real de la solicitud llega en
+        // la Fase 5. Editar todavía no tiene pantalla propia (solo Publicar
+        // y Eliminar están completos en esta fase); por ahora "Editar"
+        // simplemente no hace nada visible hasta que se implemente.
         composable(
             route = Routes.ArticleDetail.route,
             arguments = listOf(navArgument("itemId") { type = NavType.StringType })
         ) {
-            ArticleListScreen(onBackClick = { navController.popBackStack() })
+            ItemDetailScreen(
+                onBackClick = { navController.popBackStack() },
+                onRequestClick = { navController.navigate(Routes.Requests.route) },
+            )
         }
 
         composable(Routes.PublishArticle.route) {
             PublishArticleScreen(
-                onBackClick = { navController.popBackStack() }
+                onBackClick = { navController.popBackStack() },
+                onPublished = {
+                    navController.previousBackStackEntry
+                        ?.savedStateHandle
+                        ?.set("should_refresh_home", true)
+                    navController.popBackStack()
+                },
             )
         }
 
