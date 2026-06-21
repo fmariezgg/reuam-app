@@ -109,8 +109,10 @@ private fun ItemTransactionType.toArticleType(): ArticleType = when (this) {
  * cercana ("ya no está disponible"); si más adelante se necesita distinguir
  * un artículo inactivo de uno completado, hay que agregar un cuarto valor
  * a ArticleStatus en StatusBadge.kt.
+ *
+ * Pública porque se reutiliza tanto en Home como en el Detalle de artículo.
  */
-private fun ItemStatus.toArticleStatus(): ArticleStatus = when (this) {
+fun ItemStatus.toArticleStatus(): ArticleStatus = when (this) {
     ItemStatus.AVAILABLE -> ArticleStatus.DISPONIBLE
     ItemStatus.RESERVED -> ArticleStatus.RESERVADO
     ItemStatus.COMPLETED -> ArticleStatus.ENTREGADO
@@ -124,4 +126,12 @@ fun ItemCondition.toDisplayLabel(): String = when (this) {
     ItemCondition.GOOD -> "Buen estado"
     ItemCondition.FAIR -> "Estado regular"
     ItemCondition.NEEDS_REPAIR -> "Necesita reparación"
+}
+
+/** Usado en Publicar artículo y Detalle de artículo para mostrar el tipo en español. */
+fun ItemTransactionType.toDisplayLabel(): String = when (this) {
+    ItemTransactionType.DONATION -> "Donación"
+    ItemTransactionType.EXCHANGE -> "Intercambio"
+    ItemTransactionType.LOAN -> "Préstamo"
+    ItemTransactionType.SYMBOLIC_SALE -> "Venta simbólica"
 }

@@ -71,12 +71,17 @@ fun HomeScreen(
     onNavigate: (String) -> Unit = {},
     onPublishClick: () -> Unit = {},
     onArticleClick: (String) -> Unit = {},
+    shouldRefresh: Boolean = false,
     viewModel: HomeViewModel = viewModel(),
 ) {
     var activeCategoryId by remember { mutableStateOf(ALL_CATEGORIES_ID) }
     var searchQuery by remember { mutableStateOf("") }
 
     val uiState by viewModel.uiState.collectAsState()
+
+    LaunchedEffect(shouldRefresh) {
+        if (shouldRefresh) viewModel.loadHome()
+    }
 
     Scaffold(
         bottomBar = {
