@@ -95,7 +95,8 @@ private fun ItemResponse.toHomeArticleUi(categoryNamesById: Map<Int, String>): H
     )
 }
 
-private fun ItemTransactionType.toArticleType(): ArticleType = when (this) {
+/** Pública porque se reutiliza en Home y en Mis publicaciones. */
+fun ItemTransactionType.toArticleType(): ArticleType = when (this) {
     ItemTransactionType.DONATION -> ArticleType.DONACION
     ItemTransactionType.EXCHANGE -> ArticleType.INTERCAMBIO
     ItemTransactionType.LOAN -> ArticleType.PRESTAMO

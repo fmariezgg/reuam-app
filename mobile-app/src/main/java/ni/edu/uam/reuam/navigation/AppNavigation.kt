@@ -13,6 +13,7 @@ import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
 import ni.edu.uam.reuam.presentation.articles.ArticleListScreen
 import ni.edu.uam.reuam.presentation.articles.ItemDetailScreen
+import ni.edu.uam.reuam.presentation.articles.MyPublicationsScreen
 import ni.edu.uam.reuam.presentation.articles.PublishArticleScreen
 import ni.edu.uam.reuam.presentation.auth.AuthViewModel
 import ni.edu.uam.reuam.presentation.auth.LoginScreen
@@ -20,6 +21,8 @@ import ni.edu.uam.reuam.presentation.auth.SplashScreen
 import ni.edu.uam.reuam.presentation.auth.WelcomeScreen
 import ni.edu.uam.reuam.presentation.home.HomeScreen
 import ni.edu.uam.reuam.presentation.profile.ProfileScreen
+import ni.edu.uam.reuam.presentation.requests.CreateRequestScreen
+import ni.edu.uam.reuam.presentation.requests.RequestsScreen
 
 @Composable
 fun AppNavigation() {
@@ -102,18 +105,19 @@ fun AppNavigation() {
             )
         }
 
-        // Detalle real de artículo (Fase 4). El click en "Solicitar" navega
-        // a Requests por ahora — la creación real de la solicitud llega en
-        // la Fase 5. Editar todavía no tiene pantalla propia (solo Publicar
-        // y Eliminar están completos en esta fase); por ahora "Editar"
-        // simplemente no hace nada visible hasta que se implemente.
+        // Detalle real de artículo (Fase 4). "Solicitar" navega a la pantalla
+        // real de crear solicitud (Fase 5). Editar todavía no tiene pantalla
+        // propia (solo Publicar y Eliminar están completos); por ahora
+        // "Editar" simplemente no hace nada visible hasta que se implemente.
         composable(
             route = Routes.ArticleDetail.route,
             arguments = listOf(navArgument("itemId") { type = NavType.StringType })
         ) {
             ItemDetailScreen(
                 onBackClick = { navController.popBackStack() },
-                onRequestClick = { navController.navigate(Routes.Requests.route) },
+                onRequestClick = { item ->
+                    navController.navigate(Routes.CreateRequest.createRoute(item.id))
+                },
             )
         }
 
@@ -129,8 +133,27 @@ fun AppNavigation() {
             )
         }
 
+        composable(
+            route = Routes.CreateRequest.route,
+            arguments = listOf(navArgument("itemId") { type = NavType.StringType })
+        ) {
+            CreateRequestScreen(
+                onBackClick = { navController.popBackStack() },
+                onRequestSent = { navController.popBackStack() },
+            )
+        }
+
         composable(Routes.Requests.route) {
-            ArticleListScreen(onBackClick = { navController.popBackStack() })
+            RequestsScreen(
+                onArticleClick = { itemId -> navController.navigate(Routes.ArticleDetail.createRoute(itemId)) }
+            )
+        }
+
+        composable(Routes.MyPublications.route) {
+            MyPublicationsScreen(
+                onBackClick = { navController.popBackStack() },
+                onArticleClick = { itemId -> navController.navigate(Routes.ArticleDetail.createRoute(itemId)) }
+            )
         }
 
         composable(Routes.Profile.route) {
@@ -141,7 +164,8 @@ fun AppNavigation() {
                     navController.navigate(Routes.Welcome.route) {
                         popUpTo(0) { inclusive = true }
                     }
-                }
+                },
+                onMyPublicationsClick = { navController.navigate(Routes.MyPublications.route) },
             )
         }
     }

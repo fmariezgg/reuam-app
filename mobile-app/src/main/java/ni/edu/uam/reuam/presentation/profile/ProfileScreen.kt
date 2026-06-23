@@ -16,6 +16,7 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
@@ -44,6 +45,7 @@ import ni.edu.uam.reuam.presentation.components.ReUAMTextField
 @Composable
 fun ProfileScreen(
     onLogoutClick: () -> Unit,
+    onMyPublicationsClick: () -> Unit = {},
     viewModel: ProfileViewModel = viewModel(),
 ) {
     val profileState by viewModel.profileState.collectAsState()
@@ -89,6 +91,7 @@ fun ProfileScreen(
                     onCareerChange = viewModel::onCareerChange,
                     onStudentCodeChange = viewModel::onStudentCodeChange,
                     onBioChange = viewModel::onBioChange,
+                    onMyPublicationsClick = onMyPublicationsClick,
                     onSaveClick = {
                         viewModel.saveProfile(
                             onSuccess = {
@@ -120,6 +123,7 @@ private fun ProfileForm(
     onCareerChange: (String) -> Unit,
     onStudentCodeChange: (String) -> Unit,
     onBioChange: (String) -> Unit,
+    onMyPublicationsClick: () -> Unit,
     onSaveClick: () -> Unit,
 ) {
     Column(
@@ -135,8 +139,17 @@ private fun ProfileForm(
                 text = email,
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier.padding(top = 8.dp, bottom = 24.dp)
+                modifier = Modifier.padding(top = 8.dp, bottom = 16.dp)
             )
+        }
+
+        OutlinedButton(
+            onClick = onMyPublicationsClick,
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(bottom = 24.dp),
+        ) {
+            Text("Mis publicaciones")
         }
 
         ReUAMTextField(
