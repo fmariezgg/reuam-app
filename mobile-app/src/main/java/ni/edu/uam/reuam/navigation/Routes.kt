@@ -7,6 +7,9 @@ sealed class Routes(val route: String) {
     data object Home            : Routes("home")
     data object ArticleList     : Routes("article_list")   // ← NUEVO
     data object PublishArticle  : Routes("publish_article")
+    data object EditArticle     : Routes("edit_article/{itemId}") {
+        fun createRoute(itemId: String) = "edit_article/$itemId"
+    }
     data object ArticleDetail   : Routes("article_detail/{itemId}") {
         fun createRoute(itemId: String) = "article_detail/$itemId"
     }
