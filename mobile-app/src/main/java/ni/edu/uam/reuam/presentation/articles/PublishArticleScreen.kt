@@ -52,29 +52,46 @@ fun PublishArticleScreen(
     val categoriesState by viewModel.categoriesState.collectAsState()
     val formState by viewModel.formState.collectAsState()
     val isPublishing by viewModel.isPublishing.collectAsState()
+    val isLoadingItemToEdit by viewModel.isLoadingItemToEdit.collectAsState()
+    val loadItemError by viewModel.loadItemError.collectAsState()
+    val isEditMode = viewModel.isEditMode
 
     val snackbarHostState = remember { SnackbarHostState() }
     val coroutineScope = rememberCoroutineScope()
 
     Scaffold(
         topBar = {
-            TopAppBar(title = { Text("Publicar artículo") })
+            TopAppBar(
+                title = { Text(if (isEditMode) "Editar artículo" else "Publicar artículo") }
+            )
         },
         snackbarHost = { SnackbarHost(snackbarHostState) }
     ) { paddingValues ->
         Box(modifier = Modifier.fillMaxSize().padding(paddingValues)) {
-            when (val state = categoriesState) {
-                is ApiResult.Loading -> LoadingContent(message = "Cargando categorías...")
+            // En modo edición hay dos cargas independientes (categorías y el
+            // item a editar); mientras cualquiera de las dos esté en curso o
+            // haya fallado, se prioriza ese estado sobre el formulario.
+            val itemLoadFailed = loadItemError != null
+            when {
+                itemLoadFailed -> ErrorContent(
+                    message = loadItemError ?: "No se pudo cargar el artículo a editar.",
+                    onRetry = onBackClick,
+                )
 
-                is ApiResult.Error -> ErrorContent(
-                    message = state.message,
+                isLoadingItemToEdit -> LoadingContent(message = "Cargando artículo...")
+
+                categoriesState is ApiResult.Loading -> LoadingContent(message = "Cargando categorías...")
+
+                categoriesState is ApiResult.Error -> ErrorContent(
+                    message = (categoriesState as ApiResult.Error).message,
                     onRetry = { viewModel.loadCategories() }
                 )
 
-                is ApiResult.Success -> PublishForm(
-                    categories = state.data,
+                else -> PublishForm(
+                    categories = (categoriesState as ApiResult.Success).data,
                     formState = formState,
                     isPublishing = isPublishing,
+                    isEditMode = isEditMode,
                     onTitleChange = viewModel::onTitleChange,
                     onDescriptionChange = viewModel::onDescriptionChange,
                     onCategorySelected = viewModel::onCategorySelected,
@@ -86,7 +103,8 @@ fun PublishArticleScreen(
                         viewModel.publish(
                             onSuccess = {
                                 coroutineScope.launch {
-                                    snackbarHostState.showSnackbar("¡Artículo publicado!")
+                                    val message = if (isEditMode) "Cambios guardados" else "¡Artículo publicado!"
+                                    snackbarHostState.showSnackbar(message)
                                     onPublished()
                                 }
                             },
@@ -108,6 +126,7 @@ private fun PublishForm(
     categories: List<CategoryResponse>,
     formState: PublishFormState,
     isPublishing: Boolean,
+    isEditMode: Boolean,
     onTitleChange: (String) -> Unit,
     onDescriptionChange: (String) -> Unit,
     onCategorySelected: (CategoryResponse) -> Unit,
@@ -200,7 +219,7 @@ private fun PublishForm(
             }
         } else {
             ReUAMButton(
-                text = "Publicar artículo",
+                text = if (isEditMode) "Guardar cambios" else "Publicar artículo",
                 onClick = onPublishClick,
             )
         }
