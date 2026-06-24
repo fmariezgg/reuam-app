@@ -1,5 +1,6 @@
 package ni.edu.uam.reuam.presentation.articles
 
+import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -14,6 +15,7 @@ import ni.edu.uam.reuam.data.remote.dto.CreateItemRequest
 import ni.edu.uam.reuam.data.remote.dto.ItemCondition
 import ni.edu.uam.reuam.data.remote.dto.ItemResponse
 import ni.edu.uam.reuam.data.remote.dto.ItemTransactionType
+import ni.edu.uam.reuam.data.remote.dto.UpdateItemRequest
 import ni.edu.uam.reuam.data.repository.CategoryRepository
 import ni.edu.uam.reuam.data.repository.ItemRepository
 
@@ -32,9 +34,19 @@ data class PublishFormState(
 )
 
 class PublishArticleViewModel(
+    savedStateHandle: SavedStateHandle = SavedStateHandle(),
     private val categoryRepository: CategoryRepository = CategoryRepository(),
     private val itemRepository: ItemRepository = ItemRepository(),
 ) : ViewModel() {
+
+    /**
+     * Si la pantalla se abrió en modo edición, Navigation Compose inyecta
+     * el argumento de ruta "itemId" en el SavedStateHandle. Si se abrió en
+     * modo "publicar nuevo" (sin ese argumento en la ruta), esto queda en
+     * null y el ViewModel se comporta exactamente como antes.
+     */
+    private val editingItemId: String? = savedStateHandle["itemId"]
+    val isEditMode: Boolean get() = editingItemId != null
 
     private val _categoriesState = MutableStateFlow<ApiResult<List<CategoryResponse>>>(ApiResult.Loading)
     val categoriesState: StateFlow<ApiResult<List<CategoryResponse>>> = _categoriesState.asStateFlow()
@@ -45,8 +57,65 @@ class PublishArticleViewModel(
     private val _isPublishing = MutableStateFlow(false)
     val isPublishing: StateFlow<Boolean> = _isPublishing.asStateFlow()
 
+    /**
+     * true mientras se cargan los datos del artículo a editar. Solo aplica
+     * en modo edición; en modo "publicar nuevo" siempre queda en false.
+     * Se mantiene separado de categoriesState porque ambas cargas son
+     * independientes y la pantalla necesita esperar a las dos antes de
+     * mostrar el formulario precargado.
+     */
+    private val _isLoadingItemToEdit = MutableStateFlow(isEditMode)
+    val isLoadingItemToEdit: StateFlow<Boolean> = _isLoadingItemToEdit.asStateFlow()
+
+    private val _loadItemError = MutableStateFlow<String?>(null)
+    val loadItemError: StateFlow<String?> = _loadItemError.asStateFlow()
+
     init {
         loadCategories()
+        if (editingItemId != null) {
+            loadItemToEdit(editingItemId)
+        }
+    }
+
+    private fun loadItemToEdit(itemId: String) {
+        viewModelScope.launch {
+            _isLoadingItemToEdit.value = true
+            _loadItemError.value = null
+            try {
+                val item = itemRepository.getItemById(itemId)
+                // La categoría real se asigna cuando loadCategories() también
+                // termine (ver matchCategoryIfReady), porque puede llegar antes
+                // o después que esta carga — ambas corren en paralelo.
+                _formState.update {
+                    it.copy(
+                        title = item.title,
+                        description = item.description,
+                        condition = item.condition,
+                        transactionType = item.transactionType,
+                        priceText = item.priceCents?.toString() ?: "",
+                        location = item.location.orEmpty(),
+                    )
+                }
+                pendingCategoryId = item.categoryId
+                matchCategoryIfReady()
+            } catch (e: ApiException) {
+                _loadItemError.value = e.message ?: "No se pudo cargar el artículo a editar."
+            } finally {
+                _isLoadingItemToEdit.value = false
+            }
+        }
+    }
+
+    /** categoryId del item que se está editando, pendiente de resolverse a un CategoryResponse real. */
+    private var pendingCategoryId: Int? = null
+
+    private fun matchCategoryIfReady() {
+        val categories = (_categoriesState.value as? ApiResult.Success)?.data ?: return
+        val targetId = pendingCategoryId ?: return
+        val match = categories.firstOrNull { it.id == targetId }
+        if (match != null) {
+            _formState.update { it.copy(selectedCategory = match) }
+        }
     }
 
     fun loadCategories() {
@@ -55,9 +124,13 @@ class PublishArticleViewModel(
             try {
                 val categories = categoryRepository.getCategories()
                 _categoriesState.value = ApiResult.Success(categories)
-                // Preselecciona la primera categoría disponible para que el
-                // selector nunca quede vacío si el usuario no lo toca.
-                if (_formState.value.selectedCategory == null && categories.isNotEmpty()) {
+                if (editingItemId != null) {
+                    // En modo edición, intenta resolver la categoría real del
+                    // item (puede que loadItemToEdit ya haya terminado o no).
+                    matchCategoryIfReady()
+                } else if (_formState.value.selectedCategory == null && categories.isNotEmpty()) {
+                    // En modo "publicar nuevo", preselecciona la primera
+                    // categoría disponible para que el selector nunca quede vacío.
                     _formState.update { it.copy(selectedCategory = categories.first()) }
                 }
             } catch (e: ApiException) {
@@ -99,6 +172,10 @@ class PublishArticleViewModel(
         return errors
     }
 
+    /**
+     * Publica un artículo nuevo (POST) o guarda los cambios de uno existente
+     * (PUT), según si esta instancia se abrió en modo edición o no.
+     */
     fun publish(onSuccess: (ItemResponse) -> Unit, onError: (String) -> Unit) {
         val form = _formState.value
         val localErrors = validateLocally(form)
@@ -110,22 +187,42 @@ class PublishArticleViewModel(
         viewModelScope.launch {
             _isPublishing.value = true
             try {
-                val request = CreateItemRequest(
-                    title = form.title.trim(),
-                    description = form.description.trim(),
-                    categoryId = form.selectedCategory?.id,
-                    condition = form.condition,
-                    transactionType = form.transactionType,
-                    priceCents = form.priceText.toLongOrNull(),
-                    location = form.location.trim().ifBlank { null },
-                )
-                val created = itemRepository.createItem(request)
-                onSuccess(created)
+                val result = if (editingItemId != null) {
+                    itemRepository.updateItem(
+                        editingItemId,
+                        UpdateItemRequest(
+                            title = form.title.trim(),
+                            description = form.description.trim(),
+                            categoryId = form.selectedCategory?.id,
+                            condition = form.condition,
+                            transactionType = form.transactionType,
+                            priceCents = form.priceText.toLongOrNull(),
+                            location = form.location.trim().ifBlank { null },
+                        )
+                    )
+                } else {
+                    itemRepository.createItem(
+                        CreateItemRequest(
+                            title = form.title.trim(),
+                            description = form.description.trim(),
+                            categoryId = form.selectedCategory?.id,
+                            condition = form.condition,
+                            transactionType = form.transactionType,
+                            priceCents = form.priceText.toLongOrNull(),
+                            location = form.location.trim().ifBlank { null },
+                        )
+                    )
+                }
+                onSuccess(result)
             } catch (e: ApiException) {
                 if (e.fieldErrors.isNotEmpty()) {
                     _formState.update { it.copy(fieldErrors = e.fieldErrors) }
                 }
-                onError(e.message ?: "No se pudo publicar el artículo.")
+                onError(e.message ?: if (editingItemId != null) {
+                    "No se pudo guardar los cambios."
+                } else {
+                    "No se pudo publicar el artículo."
+                })
             } finally {
                 _isPublishing.value = false
             }

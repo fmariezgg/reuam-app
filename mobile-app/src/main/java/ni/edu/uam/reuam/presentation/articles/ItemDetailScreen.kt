@@ -1,7 +1,6 @@
 package ni.edu.uam.reuam.presentation.articles
 
 import androidx.compose.foundation.background
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -10,6 +9,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
@@ -32,6 +32,7 @@ import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -69,14 +70,19 @@ fun ItemDetailScreen(
     onRequestClick: (ItemResponse) -> Unit,
     onEditClick: (ItemResponse) -> Unit = {},
     onDeletedSuccessfully: () -> Unit = onBackClick,
+    shouldRefresh: Boolean = false,
     viewModel: ItemDetailViewModel = viewModel(),
 ) {
     val uiState by viewModel.uiState.collectAsState()
     val isDeleting by viewModel.isDeleting.collectAsState()
-    var showDeleteConfirm by remember { mutableStateOf(value = false) }
+    var showDeleteConfirm by remember { mutableStateOf(false) }
 
     val snackbarHostState = remember { SnackbarHostState() }
     val coroutineScope = rememberCoroutineScope()
+
+    LaunchedEffect(shouldRefresh) {
+        if (shouldRefresh) viewModel.loadItem()
+    }
 
     Scaffold(
         topBar = {
@@ -108,13 +114,15 @@ fun ItemDetailScreen(
                 is ApiResult.Loading -> LoadingContent(message = "Cargando artículo...")
 
                 is ApiResult.Error -> ErrorContent(
-                    message = state.message
-                ) { viewModel.loadItem() }
+                    message = state.message,
+                    onRetry = { viewModel.loadItem() }
+                )
 
                 is ApiResult.Success -> ItemDetailContent(
                     paddingValues = PaddingValues(0.dp),
-                    data = state.data
-                ) { onRequestClick(state.data.item) }
+                    data = state.data,
+                    onRequestClick = { onRequestClick(state.data.item) },
+                )
             }
         }
 
@@ -133,10 +141,11 @@ fun ItemDetailScreen(
                                         snackbarHostState.showSnackbar("Artículo eliminado")
                                         onDeletedSuccessfully()
                                     }
+                                },
+                                onError = { message ->
+                                    coroutineScope.launch { snackbarHostState.showSnackbar(message) }
                                 }
-                            ) { message ->
-                                coroutineScope.launch { snackbarHostState.showSnackbar(message) }
-                            }
+                            )
                         }
                     ) {
                         if (isDeleting) {
@@ -192,8 +201,8 @@ private fun ItemDetailContent(
                 color = ReUAMGreen,
             )
 
-            if ((item.transactionType == ItemTransactionType.SYMBOLIC_SALE)
-                && (item.priceCents != null)
+            if (item.transactionType == ItemTransactionType.SYMBOLIC_SALE
+                && item.priceCents != null
             ) {
                 Text(
                     text = "Precio simbólico: C$ ${item.priceCents}",
@@ -273,7 +282,7 @@ private fun ItemPhotoGallery(photos: List<ItemPhotoResponse>) {
                 contentDescription = null,
                 contentScale = ContentScale.Crop,
                 modifier = Modifier
-                    .fillParentMaxWidth()
+                    .fillMaxWidth()
                     .height(220.dp)
                     .clip(RoundedCornerShape(0.dp)),
             )

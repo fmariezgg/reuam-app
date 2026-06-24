@@ -44,6 +44,8 @@ Thumbs.db
 # =========================
 
 google-services.json
+backend/firebase-adminsdk.json
+firebase-adminsdk.json
 *.keystore
 *.jks
 *.p12

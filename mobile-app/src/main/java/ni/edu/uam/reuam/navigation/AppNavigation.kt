@@ -106,18 +106,24 @@ fun AppNavigation() {
         }
 
         // Detalle real de artículo (Fase 4). "Solicitar" navega a la pantalla
-        // real de crear solicitud (Fase 5). Editar todavía no tiene pantalla
-        // propia (solo Publicar y Eliminar están completos); por ahora
-        // "Editar" simplemente no hace nada visible hasta que se implemente.
+        // real de crear solicitud (Fase 5). "Editar" navega al formulario de
+        // edición (Fase 6), reutilizando PublishArticleScreen en modo edición.
         composable(
             route = Routes.ArticleDetail.route,
             arguments = listOf(navArgument("itemId") { type = NavType.StringType })
-        ) {
+        ) { backStackEntry ->
+            val shouldRefresh = backStackEntry.savedStateHandle
+                .remove<Boolean>("should_refresh_detail") ?: false
+
             ItemDetailScreen(
                 onBackClick = { navController.popBackStack() },
                 onRequestClick = { item ->
                     navController.navigate(Routes.CreateRequest.createRoute(item.id))
                 },
+                onEditClick = { item ->
+                    navController.navigate(Routes.EditArticle.createRoute(item.id))
+                },
+                shouldRefresh = shouldRefresh,
             )
         }
 
@@ -128,6 +134,27 @@ fun AppNavigation() {
                     navController.previousBackStackEntry
                         ?.savedStateHandle
                         ?.set("should_refresh_home", true)
+                    navController.popBackStack()
+                },
+            )
+        }
+
+        // Reutiliza PublishArticleScreen/PublishArticleViewModel: al recibir
+        // el argumento "itemId" en la ruta, el ViewModel entra en modo
+        // edición automáticamente (ver isEditMode en PublishArticleViewModel).
+        composable(
+            route = Routes.EditArticle.route,
+            arguments = listOf(navArgument("itemId") { type = NavType.StringType })
+        ) {
+            PublishArticleScreen(
+                onBackClick = { navController.popBackStack() },
+                onPublished = {
+                    // El detalle al que se vuelve necesita recargar para ver
+                    // los datos actualizados; Home también, por si el título
+                    // o categoría cambiados afectan lo que ya se ve ahí.
+                    navController.previousBackStackEntry
+                        ?.savedStateHandle
+                        ?.set("should_refresh_detail", true)
                     navController.popBackStack()
                 },
             )
