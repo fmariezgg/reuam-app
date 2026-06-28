@@ -47,7 +47,7 @@ import ni.edu.uam.reuam.presentation.home.toDisplayLabel
 fun PublishArticleScreen(
     onBackClick: () -> Unit,
     onPublished: () -> Unit = onBackClick,
-    viewModel: PublishArticleViewModel = viewModel(),
+    viewModel: PublishArticleViewModel = viewModel(factory = PublishArticleViewModel.Factory),
 ) {
     val categoriesState by viewModel.categoriesState.collectAsState()
     val formState by viewModel.formState.collectAsState()
