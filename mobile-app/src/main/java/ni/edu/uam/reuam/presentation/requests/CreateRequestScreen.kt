@@ -34,7 +34,7 @@ import ni.edu.uam.reuam.presentation.components.ReUAMTextField
 fun CreateRequestScreen(
     onBackClick: () -> Unit,
     onRequestSent: () -> Unit,
-    viewModel: CreateRequestViewModel = viewModel(),
+    viewModel: CreateRequestViewModel = viewModel(factory = CreateRequestViewModel.Factory),
 ) {
     val message by viewModel.message.collectAsState()
     val isSending by viewModel.isSending.collectAsState()

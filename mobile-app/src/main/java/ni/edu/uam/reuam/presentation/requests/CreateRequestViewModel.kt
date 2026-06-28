@@ -2,7 +2,11 @@ package ni.edu.uam.reuam.presentation.requests
 
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
+import androidx.lifecycle.ViewModelProvider
+import androidx.lifecycle.createSavedStateHandle
 import androidx.lifecycle.viewModelScope
+import androidx.lifecycle.viewmodel.initializer
+import androidx.lifecycle.viewmodel.viewModelFactory
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -40,6 +44,22 @@ class CreateRequestViewModel(
                 onError(e.message ?: "No se pudo enviar la solicitud.")
             } finally {
                 _isSending.value = false
+            }
+        }
+    }
+
+    companion object {
+        /**
+         * Factory explícita: este ViewModel tiene 2 parámetros en el
+         * constructor (SavedStateHandle + repositorio), y la fábrica
+         * automática de viewModel() en Compose solo construye por reflexión
+         * cuando el constructor es únicamente (SavedStateHandle). Sin esta
+         * Factory, abrir esta pantalla crashea con NoSuchMethodException.
+         */
+        val Factory: ViewModelProvider.Factory = viewModelFactory {
+            initializer {
+                val savedStateHandle = createSavedStateHandle()
+                CreateRequestViewModel(savedStateHandle = savedStateHandle)
             }
         }
     }
