@@ -35,7 +35,10 @@ class ReuamServices(
     val exchangeRequests: ExchangeRequestService,
 )
 
-class UserProfileService(private val repository: UserProfileRepository) {
+class UserProfileService(
+    private val repository: UserProfileRepository,
+    private val localStorage: LocalStorageService,
+) {
     suspend fun getByFirebaseUid(firebaseUid: String): UserProfile =
         repository.findByFirebaseUid(firebaseUid) ?: throw notFound("Profile not found")
 
@@ -52,6 +55,10 @@ class UserProfileService(private val repository: UserProfileRepository) {
             ?: request.email
             ?: authUser.email
             ?: "Estudiante UAM"
+        val requestedPhotoUrl = request.photoUrl
+            ?.trim()
+            ?.takeIf { it.isNotEmpty() }
+            ?.let(localStorage::resolveProfilePhotoUrl)
 
         return repository.upsert(
             UserProfile(
@@ -59,7 +66,7 @@ class UserProfileService(private val repository: UserProfileRepository) {
                 firebaseUid = authUser.firebaseUid,
                 email = request.email ?: existing?.email ?: authUser.email,
                 displayName = displayName.trimRequired("displayName"),
-                photoUrl = request.photoUrl ?: existing?.photoUrl ?: authUser.picture,
+                photoUrl = requestedPhotoUrl ?: existing?.photoUrl ?: authUser.picture,
                 phoneNumber = request.phoneNumber ?: existing?.phoneNumber,
                 career = request.career ?: existing?.career,
                 studentCode = request.studentCode ?: existing?.studentCode,
@@ -74,7 +81,7 @@ class UserProfileService(private val repository: UserProfileRepository) {
         val existing = getByFirebaseUid(firebaseUid)
         return repository.upsert(
             existing.copy(
-                photoUrl = request.photoUrl.trimRequired("photoUrl"),
+                photoUrl = localStorage.resolveProfilePhotoUrl(request.photoUrl.trimRequired("photoUrl")),
                 updatedAt = nowMillis(),
             )
         )
@@ -100,6 +107,7 @@ class CategoryService(private val repository: CategoryRepository) {
 class ItemService(
     private val repository: ItemRepository,
     private val categories: CategoryRepository,
+    private val localStorage: LocalStorageService,
 ) {
     suspend fun create(ownerId: UUID, request: CreateItemRequest): Item {
         validateCategory(request.categoryId)
@@ -122,11 +130,12 @@ class ItemService(
                 createdAt = now,
                 updatedAt = now,
                 photos = request.photos.mapIndexed { index, photo ->
+                    val storagePath = photo.storagePath.trimRequired("photos[$index].storagePath")
                     ItemPhoto(
                         id = UUID.randomUUID(),
                         itemId = itemId,
-                        storagePath = photo.storagePath.trimRequired("photos[$index].storagePath"),
-                        downloadUrl = photo.downloadUrl?.trim()?.takeIf { it.isNotEmpty() },
+                        storagePath = storagePath,
+                        downloadUrl = localStorage.resolveItemPhotoDownloadUrl(storagePath, photo.downloadUrl),
                         sortOrder = photo.sortOrder,
                         createdAt = now,
                     )
@@ -152,11 +161,12 @@ class ItemService(
 
         val now = nowMillis()
         val photos = request.photos?.mapIndexed { index, photo ->
+            val storagePath = photo.storagePath.trimRequired("photos[$index].storagePath")
             ItemPhoto(
                 id = UUID.randomUUID(),
                 itemId = id,
-                storagePath = photo.storagePath.trimRequired("photos[$index].storagePath"),
-                downloadUrl = photo.downloadUrl?.trim()?.takeIf { it.isNotEmpty() },
+                storagePath = storagePath,
+                downloadUrl = localStorage.resolveItemPhotoDownloadUrl(storagePath, photo.downloadUrl),
                 sortOrder = photo.sortOrder,
                 createdAt = now,
             )

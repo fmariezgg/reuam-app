@@ -11,12 +11,10 @@ import java.util.concurrent.TimeUnit
 /**
  * Punto único de construcción del cliente HTTP de la app.
  *
- * BuildConfig.BASE_URL viene de mobile-app/build.gradle.kts y vale
- * "http://10.0.2.2:8080/api/v1/" — el alias que el Android Emulator
- * usa para llegar al localhost:8080 de la máquina donde corre el
- * backend Ktor. Si alguna vez corres en un dispositivo físico en la
- * misma red Wi-Fi que tu PC, cambia esa única línea por la IP local
- * de tu máquina (ej. "http://192.168.1.50:8080/api/v1/").
+ * BuildConfig.BASE_URL viene de mobile-app/build.gradle.kts. Por defecto
+ * usa "http://10.0.2.2:8080/api/v1/" para el emulador. Para una APK en
+ * telefono fisico, se puede compilar pasando REUAM_BASE_URL con la IP
+ * local de la computadora donde corre el backend.
  */
 object RetrofitInstance {
 

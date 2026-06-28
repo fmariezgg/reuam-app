@@ -33,6 +33,8 @@ El backend lee primero variables de entorno y, si no existen, usa los valores de
 | `DATABASE_URL` | Si | URL R2DBC de Postgres. Ejemplo: `r2dbc:postgresql://HOST:5432/reuam` |
 | `DATABASE_USER` | Si | Usuario de la base de datos |
 | `DATABASE_PASSWORD` | Si | Password de la base de datos |
+| `LOCAL_STORAGE_DIR` | No | Carpeta local donde se guardan/leen imagenes. Por defecto: `./storage` |
+| `LOCAL_STORAGE_PUBLIC_BASE_URL` | No | URL publica que Android usa para leer imagenes locales. Por defecto: `http://10.0.2.2:8080` |
 
 Para desarrollo local, el proyecto usa H2 en modo compatible con Postgres:
 
@@ -61,7 +63,7 @@ firebase-adminsdk.json
 
 Si el archivo no existe, el servidor arranca, pero las rutas protegidas responden `401 Unauthorized`. Esto permite desarrollo local de rutas publicas sin exponer un modo inseguro.
 
-## Storage De Imagenes
+## Almacenamiento Local De Imagenes
 
 No se guardan imagenes binarias en Postgres. Postgres guarda solo metadata:
 
@@ -70,7 +72,21 @@ No se guardan imagenes binarias en Postgres. Postgres guarda solo metadata:
 - orden de la foto
 - relacion con perfil o articulo
 
-Convenciones recomendadas en Firebase Storage:
+El backend sirve archivos desde una carpeta local. Por defecto, esa carpeta es:
+
+```text
+backend/storage
+```
+
+Y se publica en:
+
+```text
+http://10.0.2.2:8080/storage
+```
+
+`10.0.2.2` es el alias que usa el emulador de Android para entrar al `localhost` de la computadora. Si usas un celular fisico, cambia `LOCAL_STORAGE_PUBLIC_BASE_URL` por la IP local de tu computadora, por ejemplo `http://192.168.1.50:8080`.
+
+Convenciones recomendadas para rutas locales:
 
 ```text
 profiles/{firebaseUid}/avatar.jpg
@@ -79,22 +95,28 @@ items/{firebaseUid}/{itemId}/{photoId}.jpg
 
 Flujo recomendado para fotos de perfil:
 
-1. La app sube la imagen a Firebase Storage.
-2. La app obtiene el `downloadUrl`.
-3. La app llama `PATCH /api/v1/profiles/me/photo`.
+1. Guarda la imagen dentro de `backend/storage/profiles/{firebaseUid}/avatar.jpg`.
+2. La app llama `PATCH /api/v1/profiles/me/photo` con `photoUrl: "profiles/{firebaseUid}/avatar.jpg"`.
+3. El backend convierte esa ruta en `http://10.0.2.2:8080/storage/profiles/{firebaseUid}/avatar.jpg`.
 
 Flujo recomendado para fotos de articulos:
 
 1. Crear el articulo con `POST /api/v1/items` sin fotos, o con fotos ya subidas.
-2. Subir imagenes a `items/{firebaseUid}/{itemId}/{photoId}.jpg`.
-3. Actualizar metadata con `PUT /api/v1/items/{id}` enviando `photos`.
+2. Guarda las imagenes dentro de `backend/storage/items/{firebaseUid}/{itemId}/`.
+3. Actualizar metadata con `PUT /api/v1/items/{id}` enviando `photos`, por ejemplo:
 
-Reglas esperadas de Storage:
+```json
+{
+  "photos": [
+    {
+      "storagePath": "items/UID/ITEM_ID/foto1.jpg",
+      "sortOrder": 0
+    }
+  ]
+}
+```
 
-- Solo usuarios autenticados pueden escribir.
-- El usuario solo puede escribir bajo su propio `firebaseUid`.
-- Limitar `contentType` a imagenes.
-- Limitar tamano maximo por archivo.
+Si `downloadUrl` viene vacio, el backend lo completa usando `storagePath`. Si mandas un `downloadUrl` `http://` o `https://`, se conserva para no romper datos viejos.
 
 ## Convenciones De API
 
