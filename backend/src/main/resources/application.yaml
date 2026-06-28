@@ -7,9 +7,14 @@ ktor:
       - ni.uam.edu.plugins.SerializationKt.configureSerialization
       - ni.uam.edu.plugins.SecurityKt.configureSecurity
       - ni.uam.edu.plugins.ExceptionsKt.configureExceptions
+      - ni.uam.edu.plugins.LocalStorageKt.configureLocalStorage
       - ni.uam.edu.plugins.DatabaseKt.configureDatabase
 
 database:
   url: "r2dbc:h2:file:///./reuam;MODE=PostgreSQL;DATABASE_TO_UPPER=false"
   user: "root"
   password: ""
+
+storage:
+  localDir: "./storage"
+  publicBaseUrl: "http://10.0.2.2:8080"

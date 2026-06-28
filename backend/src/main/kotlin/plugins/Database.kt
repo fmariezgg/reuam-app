@@ -10,6 +10,7 @@ import ni.uam.edu.routes.configureReuamRoutes
 import ni.uam.edu.services.CategoryService
 import ni.uam.edu.services.ExchangeRequestService
 import ni.uam.edu.services.ItemService
+import ni.uam.edu.services.LocalStorageService
 import ni.uam.edu.services.ReuamServices
 import ni.uam.edu.services.UserProfileService
 import org.jetbrains.exposed.v1.r2dbc.R2dbcDatabase
@@ -27,12 +28,13 @@ suspend fun Application.configureDatabase() {
     val categoryRepository = ExposedCategoryRepository(database)
     val itemRepository = ExposedItemRepository(database)
     val exchangeRequestRepository = ExposedExchangeRequestRepository(database)
+    val localStorage = LocalStorageService.fromApplication(this)
 
     configureReuamRoutes(
         ReuamServices(
-            profiles = UserProfileService(profileRepository),
+            profiles = UserProfileService(profileRepository, localStorage),
             categories = CategoryService(categoryRepository),
-            items = ItemService(itemRepository, categoryRepository),
+            items = ItemService(itemRepository, categoryRepository, localStorage),
             exchangeRequests = ExchangeRequestService(exchangeRequestRepository, itemRepository),
         )
     )
