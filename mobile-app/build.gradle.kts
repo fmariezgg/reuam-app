@@ -22,9 +22,15 @@ android {
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
 
-        // 10.0.2.2 es el alias que el Android Emulator usa para llegar al
-        // localhost de la máquina host donde corre el backend Ktor.
-        buildConfigField("String", "BASE_URL", "\"http://10.0.2.2:8080/api/v1/\"")
+        // Por defecto funciona en Android Emulator. Para una APK en telefono fisico,
+        // compila con -PREUAM_BASE_URL=http://IP_DE_TU_PC:8080/api/v1/
+        val apiBaseUrl = providers.gradleProperty("REUAM_BASE_URL")
+            .orElse(providers.environmentVariable("REUAM_BASE_URL"))
+            .orElse("http://10.0.2.2:8080/api/v1/")
+            .get()
+            .trim()
+            .let { if (it.endsWith("/")) it else "$it/" }
+        buildConfigField("String", "BASE_URL", "\"$apiBaseUrl\"")
     }
 
     buildTypes {
