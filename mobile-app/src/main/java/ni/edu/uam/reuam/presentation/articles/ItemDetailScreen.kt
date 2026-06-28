@@ -71,7 +71,7 @@ fun ItemDetailScreen(
     onEditClick: (ItemResponse) -> Unit = {},
     onDeletedSuccessfully: () -> Unit = onBackClick,
     shouldRefresh: Boolean = false,
-    viewModel: ItemDetailViewModel = viewModel(),
+    viewModel: ItemDetailViewModel = viewModel(factory = ItemDetailViewModel.Factory),
 ) {
     val uiState by viewModel.uiState.collectAsState()
     val isDeleting by viewModel.isDeleting.collectAsState()

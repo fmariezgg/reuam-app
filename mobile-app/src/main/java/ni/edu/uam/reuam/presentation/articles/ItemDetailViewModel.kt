@@ -2,7 +2,11 @@ package ni.edu.uam.reuam.presentation.articles
 
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
+import androidx.lifecycle.ViewModelProvider
+import androidx.lifecycle.createSavedStateHandle
 import androidx.lifecycle.viewModelScope
+import androidx.lifecycle.viewmodel.initializer
+import androidx.lifecycle.viewmodel.viewModelFactory
 import com.google.firebase.auth.FirebaseAuth
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -84,6 +88,28 @@ class ItemDetailViewModel(
                 onError(e.message ?: "No se pudo eliminar el artículo.")
             } finally {
                 _isDeleting.value = false
+            }
+        }
+    }
+
+    companion object {
+        /**
+         * Factory explícita requerida porque este ViewModel tiene más de un
+         * parámetro en el constructor (SavedStateHandle + 2 repositorios con
+         * valores por defecto). La fábrica automática de viewModel() en
+         * Compose solo sabe construir por reflexión cuando el constructor es
+         * únicamente (SavedStateHandle); con parámetros adicionales, aunque
+         * tengan default, busca un constructor sin argumentos que no existe
+         * en el bytecode JVM, y crashea con NoSuchMethodException.
+         *
+         * CREATION_CALLBACK_KEY / APPLICATION_KEY no se usan aquí porque no
+         * se necesita Application; solo se extrae el SavedStateHandle ya
+         * resuelto por Navigation Compose desde las CreationExtras.
+         */
+        val Factory: ViewModelProvider.Factory = viewModelFactory {
+            initializer {
+                val savedStateHandle = createSavedStateHandle()
+                ItemDetailViewModel(savedStateHandle = savedStateHandle)
             }
         }
     }
