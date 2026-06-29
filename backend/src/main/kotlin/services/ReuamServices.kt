@@ -33,6 +33,7 @@ class ReuamServices(
     val categories: CategoryService,
     val items: ItemService,
     val exchangeRequests: ExchangeRequestService,
+    val localStorage: LocalStorageService,
 )
 
 class UserProfileService(
@@ -155,7 +156,11 @@ class ItemService(
         if (existing.ownerId != ownerId) throw forbidden("Only the owner can update this item")
 
         val transactionType = request.transactionType ?: existing.transactionType
-        val priceCents = request.priceCents ?: existing.priceCents
+        val priceCents = if (transactionType == ItemTransactionType.SYMBOLIC_SALE) {
+            request.priceCents ?: existing.priceCents
+        } else {
+            null
+        }
         validateCategory(request.categoryId ?: existing.categoryId)
         validatePrice(transactionType, priceCents)
 

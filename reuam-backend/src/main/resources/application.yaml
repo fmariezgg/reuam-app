@@ -1,0 +1,13 @@
+ktor:
+  deployment:
+    port: 8080
+  application:
+    modules:
+      - ni.edu.uam.HttpKt.configureHttp
+      - ni.edu.uam.SerializationKt.configureSerialization
+      - ni.edu.uam.SecurityKt.configureSecurity
+      - ni.edu.uam.RequestValidationKt.configureRequestValidation
+      - ni.edu.uam.StatusPagesKt.configureStatusPages
+      - ni.edu.uam.ExposedKt.configureExposed
+      - ni.edu.uam.PostgresKt.configurePostgres
+      - ni.edu.uam.RoutingKt.configureRouting

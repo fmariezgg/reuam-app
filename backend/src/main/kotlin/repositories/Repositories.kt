@@ -54,9 +54,11 @@ interface ExchangeRequestRepository {
 }
 
 class ReuamSchema(private val database: R2dbcDatabase) {
+    @Suppress("DEPRECATION")
     suspend fun create() {
         suspendTransaction(database) {
-            SchemaUtils.create(
+            // Useful for the local H2 database while the schema is still changing.
+            SchemaUtils.createMissingTablesAndColumns(
                 UserProfilesTable,
                 CategoriesTable,
                 ItemsTable,

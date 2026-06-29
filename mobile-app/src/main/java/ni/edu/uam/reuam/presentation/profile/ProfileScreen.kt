@@ -9,8 +9,9 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.Logout
 import androidx.compose.material.icons.filled.AccountCircle
-import androidx.compose.material.icons.filled.Logout
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
@@ -44,6 +45,7 @@ import ni.edu.uam.reuam.presentation.components.ReUAMTextField
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ProfileScreen(
+    onBackClick: () -> Unit,
     onLogoutClick: () -> Unit,
     onMyPublicationsClick: () -> Unit = {},
     viewModel: ProfileViewModel = viewModel(),
@@ -59,9 +61,14 @@ fun ProfileScreen(
         topBar = {
             TopAppBar(
                 title = { Text("Mi perfil") },
+                navigationIcon = {
+                    IconButton(onClick = onBackClick) {
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Volver")
+                    }
+                },
                 actions = {
                     IconButton(onClick = onLogoutClick) {
-                        Icon(Icons.Filled.Logout, contentDescription = "Cerrar sesión")
+                        Icon(Icons.AutoMirrored.Filled.Logout, contentDescription = "Cerrar sesión")
                     }
                 }
             )

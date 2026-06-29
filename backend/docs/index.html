@@ -844,6 +844,16 @@
     "photoUrl" : { }
   }
 };
+            defs["UploadedFileResponse"] = {
+  "title" : "UploadedFileResponse",
+  "required" : [ "downloadUrl", "sizeBytes", "storagePath" ],
+  "properties" : {
+    "storagePath" : { },
+    "downloadUrl" : { },
+    "contentType" : { },
+    "sizeBytes" : { }
+  }
+};
             defs["UpsertUserProfileRequest"] = {
   "title" : "UpsertUserProfileRequest",
   "properties" : {
@@ -947,6 +957,10 @@
                     </li>
                     <li data-group="System" data-name="root" class="">
                       <a href="#api-System-root">root</a>
+                    </li>
+                  <li class="nav-header" data-group="Uploads"><a href="#api-Uploads">API Methods - Uploads</a></li>
+                    <li data-group="Uploads" data-name="uploadItemPhoto" class="">
+                      <a href="#api-Uploads-uploadItemPhoto">uploadItemPhoto</a>
                     </li>
           </ul>
         </nav>
@@ -6930,6 +6944,334 @@ except ApiException as e:
                             </ul>
 
                             <div class="tab-content" style='margin-bottom: 10px;'>
+                            </div>
+
+                        </article>
+                      </div>
+                      <hr>
+                  </section>
+                <section id="api-Uploads">
+                  <h1>Uploads</h1>
+                    <div id="api-Uploads-uploadItemPhoto">
+                      <article id="api-Uploads-uploadItemPhoto-0" data-group="User" data-name="uploadItemPhoto" data-version="0">
+                        <div class="pull-left">
+                          <h1>uploadItemPhoto</h1>
+                          <p>Upload an item photo</p>
+                        </div>
+                        <div class="pull-right"></div>
+                        <div class="clearfix"></div>
+                        <p></p>
+                        <p class="marked"></p>
+                        <p></p>
+                        <br />
+                        <pre class="prettyprint language-html prettyprinted" data-type="post"><code><span class="pln">/api/v1/uploads/item-photo</span></code></pre>
+                        <p>
+                          <h3>Usage and SDK Samples</h3>
+                        </p>
+                        <ul class="nav nav-tabs nav-tabs-examples">
+                          <li class="active"><a href="#examples-Uploads-uploadItemPhoto-0-curl">Curl</a></li>
+                          <li class=""><a href="#examples-Uploads-uploadItemPhoto-0-java">Java</a></li>
+                          <li class=""><a href="#examples-Uploads-uploadItemPhoto-0-android">Android</a></li>
+                          <!--<li class=""><a href="#examples-Uploads-uploadItemPhoto-0-groovy">Groovy</a></li>-->
+                          <li class=""><a href="#examples-Uploads-uploadItemPhoto-0-objc">Obj-C</a></li>
+                          <li class=""><a href="#examples-Uploads-uploadItemPhoto-0-javascript">JavaScript</a></li>
+                          <!--<li class=""><a href="#examples-Uploads-uploadItemPhoto-0-angular">Angular</a></li>-->
+                          <li class=""><a href="#examples-Uploads-uploadItemPhoto-0-csharp">C#</a></li>
+                          <li class=""><a href="#examples-Uploads-uploadItemPhoto-0-php">PHP</a></li>
+                          <li class=""><a href="#examples-Uploads-uploadItemPhoto-0-perl">Perl</a></li>
+                          <li class=""><a href="#examples-Uploads-uploadItemPhoto-0-python">Python</a></li>
+                        </ul>
+
+                        <div class="tab-content">
+                          <div class="tab-pane active" id="examples-Uploads-uploadItemPhoto-0-curl">
+                           <pre class="prettyprint"><code class="language-bsh">curl -X POST\
+ -H "Authorization: Bearer [[accessToken]]"\
+-H "Accept: application/json"\
+"//api/v1/uploads/item-photo"</code></pre>
+                          </div>
+                          <div class="tab-pane" id="examples-Uploads-uploadItemPhoto-0-java">
+                            <pre class="prettyprint"><code class="language-java">import io.swagger.client.*;
+import io.swagger.client.auth.*;
+import io.swagger.client.model.*;
+import io.swagger.client.api.UploadsApi;
+
+import java.io.File;
+import java.util.*;
+
+public class UploadsApiExample {
+
+    public static void main(String[] args) {
+        ApiClient defaultClient = Configuration.getDefaultApiClient();
+
+
+        UploadsApi apiInstance = new UploadsApi();
+        try {
+            UploadedFileResponse result = apiInstance.uploadItemPhoto();
+            System.out.println(result);
+        } catch (ApiException e) {
+            System.err.println("Exception when calling UploadsApi#uploadItemPhoto");
+            e.printStackTrace();
+        }
+    }
+}</code></pre>
+                          </div>
+
+                          <div class="tab-pane" id="examples-Uploads-uploadItemPhoto-0-android">
+                            <pre class="prettyprint"><code class="language-java">import io.swagger.client.api.UploadsApi;
+
+public class UploadsApiExample {
+
+    public static void main(String[] args) {
+        UploadsApi apiInstance = new UploadsApi();
+        try {
+            UploadedFileResponse result = apiInstance.uploadItemPhoto();
+            System.out.println(result);
+        } catch (ApiException e) {
+            System.err.println("Exception when calling UploadsApi#uploadItemPhoto");
+            e.printStackTrace();
+        }
+    }
+}</code></pre>
+                          </div>
+  <!--
+  <div class="tab-pane" id="examples-Uploads-uploadItemPhoto-0-groovy">
+  <pre class="prettyprint language-json prettyprinted" data-type="json"><code>Coming Soon!</code></pre>
+  </div> -->
+                            <div class="tab-pane" id="examples-Uploads-uploadItemPhoto-0-objc">
+                              <pre class="prettyprint"><code class="language-cpp">Configuration *apiConfig = [Configuration sharedConfig];
+
+UploadsApi *apiInstance = [[UploadsApi alloc] init];
+
+// Upload an item photo
+[apiInstance uploadItemPhotoWithCompletionHandler: 
+              ^(UploadedFileResponse output, NSError* error) {
+                            if (output) {
+                                NSLog(@"%@", output);
+                            }
+                            if (error) {
+                                NSLog(@"Error: %@", error);
+                            }
+                        }];
+</code></pre>
+                            </div>
+
+                            <div class="tab-pane" id="examples-Uploads-uploadItemPhoto-0-javascript">
+                              <pre class="prettyprint"><code class="language-js">var UntitledApi = require('untitled_api');
+var defaultClient = UntitledApi.ApiClient.instance;
+
+
+var api = new UntitledApi.UploadsApi()
+var callback = function(error, data, response) {
+  if (error) {
+    console.error(error);
+  } else {
+    console.log('API called successfully. Returned data: ' + data);
+  }
+};
+api.uploadItemPhoto(callback);
+</code></pre>
+                            </div>
+
+                            <!--<div class="tab-pane" id="examples-Uploads-uploadItemPhoto-0-angular">
+              <pre class="prettyprint language-json prettyprinted" data-type="json"><code>Coming Soon!</code></pre>
+            </div>-->
+                            <div class="tab-pane" id="examples-Uploads-uploadItemPhoto-0-csharp">
+                              <pre class="prettyprint"><code class="language-cs">using System;
+using System.Diagnostics;
+using IO.Swagger.Api;
+using IO.Swagger.Client;
+using IO.Swagger.Model;
+
+namespace Example
+{
+    public class uploadItemPhotoExample
+    {
+        public void main()
+        {
+
+
+            var apiInstance = new UploadsApi();
+
+            try
+            {
+                // Upload an item photo
+                UploadedFileResponse result = apiInstance.uploadItemPhoto();
+                Debug.WriteLine(result);
+            }
+            catch (Exception e)
+            {
+                Debug.Print("Exception when calling UploadsApi.uploadItemPhoto: " + e.Message );
+            }
+        }
+    }
+}
+</code></pre>
+                            </div>
+
+                            <div class="tab-pane" id="examples-Uploads-uploadItemPhoto-0-php">
+                              <pre class="prettyprint"><code class="language-php"><&#63;php
+require_once(__DIR__ . '/vendor/autoload.php');
+
+
+$api_instance = new Swagger\Client\ApiUploadsApi();
+
+try {
+    $result = $api_instance->uploadItemPhoto();
+    print_r($result);
+} catch (Exception $e) {
+    echo 'Exception when calling UploadsApi->uploadItemPhoto: ', $e->getMessage(), PHP_EOL;
+}
+?></code></pre>
+                            </div>
+
+                            <div class="tab-pane" id="examples-Uploads-uploadItemPhoto-0-perl">
+                              <pre class="prettyprint"><code class="language-perl">use Data::Dumper;
+use WWW::SwaggerClient::Configuration;
+use WWW::SwaggerClient::UploadsApi;
+
+
+my $api_instance = WWW::SwaggerClient::UploadsApi->new();
+
+eval { 
+    my $result = $api_instance->uploadItemPhoto();
+    print Dumper($result);
+};
+if ($@) {
+    warn "Exception when calling UploadsApi->uploadItemPhoto: $@\n";
+}</code></pre>
+                            </div>
+
+                            <div class="tab-pane" id="examples-Uploads-uploadItemPhoto-0-python">
+                              <pre class="prettyprint"><code class="language-python">from __future__ import print_statement
+import time
+import swagger_client
+from swagger_client.rest import ApiException
+from pprint import pprint
+
+
+# create an instance of the API class
+api_instance = swagger_client.UploadsApi()
+
+try: 
+    # Upload an item photo
+    api_response = api_instance.upload_item_photo()
+    pprint(api_response)
+except ApiException as e:
+    print("Exception when calling UploadsApi->uploadItemPhoto: %s\n" % e)</code></pre>
+                            </div>
+                          </div>
+
+                          <h2>Parameters</h2>
+
+
+
+
+
+
+                          <h2>Responses</h2>
+                            <h3> Status: default - API error </h3>
+
+                            <ul class="nav nav-tabs nav-tabs-examples" >
+                                <li class="active">
+                                  <a data-toggle="tab" href="#responses-uploadItemPhoto-default-schema">Schema</a>
+                                </li>
+
+                            </ul>
+
+                            <div class="tab-content" style='margin-bottom: 10px;'>
+                                <div class="tab-pane active" id="responses-uploadItemPhoto-default-schema">
+                                  <div id='responses-uploadItemPhoto-default-schema-default' style="padding: 30px; border-left: 1px solid #eee; border-right: 1px solid #eee; border-bottom: 1px solid #eee;">
+                                    <script>
+                                      $(document).ready(function() {
+                                        var schemaWrapper = {
+  "description" : "API error",
+  "content" : {
+    "application/json" : {
+      "schema" : {
+        "title" : "ni.uam.edu.models.BackendErrorResponse",
+        "required" : [ "code", "detail" ],
+        "properties" : {
+          "code" : { },
+          "detail" : { },
+          "field_errors" : {
+            "additionalProperties" : { }
+          }
+        },
+        "x-content-type" : "application/json"
+      }
+    }
+  }
+};
+                                        var schema = schemaWrapper.content["application/json"].schema;
+                                        if (schema.$ref != null) {
+                                          schema = defsParser.$refs.get(schema.$ref);
+                                        } else {
+                                          schemaWrapper.components = {};
+                                          schemaWrapper.components.schemas = Object.assign({}, defs);
+                                          $RefParser.dereference(schemaWrapper).catch(function(err) {
+                                            console.log(err);
+                                          });
+                                        }
+
+                                        //console.log(JSON.stringify(schema));
+                                        var view = new JSONSchemaView(schema, 3);
+                                        $('#responses-uploadItemPhoto-default-schema-data').val(stringify(schema));
+                                        var result = $('#responses-uploadItemPhoto-default-schema-default');
+                                        result.empty();
+                                        result.append(view.render());
+                                      });
+                                    </script>
+                                  </div>
+                                  <input id='responses-uploadItemPhoto-default-schema-data' type='hidden' value=''></input>
+                                </div>
+                            </div>
+
+                            <h3> Status: 201 - File uploaded </h3>
+
+                            <ul class="nav nav-tabs nav-tabs-examples" >
+                                <li class="active">
+                                  <a data-toggle="tab" href="#responses-uploadItemPhoto-201-schema">Schema</a>
+                                </li>
+
+                            </ul>
+
+                            <div class="tab-content" style='margin-bottom: 10px;'>
+                                <div class="tab-pane active" id="responses-uploadItemPhoto-201-schema">
+                                  <div id='responses-uploadItemPhoto-201-schema-201' style="padding: 30px; border-left: 1px solid #eee; border-right: 1px solid #eee; border-bottom: 1px solid #eee;">
+                                    <script>
+                                      $(document).ready(function() {
+                                        var schemaWrapper = {
+  "description" : "File uploaded",
+  "content" : {
+    "application/json" : {
+      "schema" : {
+        "$ref" : "#/components/schemas/UploadedFileResponse"
+      }
+    }
+  }
+};
+                                        var schema = schemaWrapper.content["application/json"].schema;
+                                        if (schema.$ref != null) {
+                                          schema = defsParser.$refs.get(schema.$ref);
+                                        } else {
+                                          schemaWrapper.components = {};
+                                          schemaWrapper.components.schemas = Object.assign({}, defs);
+                                          $RefParser.dereference(schemaWrapper).catch(function(err) {
+                                            console.log(err);
+                                          });
+                                        }
+
+                                        //console.log(JSON.stringify(schema));
+                                        var view = new JSONSchemaView(schema, 3);
+                                        $('#responses-uploadItemPhoto-201-schema-data').val(stringify(schema));
+                                        var result = $('#responses-uploadItemPhoto-201-schema-201');
+                                        result.empty();
+                                        result.append(view.render());
+                                      });
+                                    </script>
+                                  </div>
+                                  <input id='responses-uploadItemPhoto-201-schema-data' type='hidden' value=''></input>
+                                </div>
                             </div>
 
                         </article>

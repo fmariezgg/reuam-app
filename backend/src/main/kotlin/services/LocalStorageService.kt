@@ -2,13 +2,18 @@ package ni.uam.edu.services
 
 import io.ktor.server.application.Application
 import ni.uam.edu.models.badRequest
+import ni.uam.edu.services.dto.UploadedFileResponse
+import java.io.InputStream
 import java.net.URI
 import java.net.URLEncoder
+import java.nio.file.Files
 import java.nio.file.Path
 import java.nio.file.Paths
+import java.util.UUID
 import kotlin.io.path.pathString
 
 private const val DEFAULT_PUBLIC_PATH = "/storage"
+private const val MAX_UPLOAD_BYTES = 5L * 1024L * 1024L
 
 class LocalStorageService(
     private val rootDir: Path,
@@ -24,6 +29,30 @@ class LocalStorageService(
             ?.takeIf { it.isNotEmpty() }
             ?.let(::resolveReference)
             ?: resolveReference(storagePath)
+
+    fun saveItemPhotoUpload(
+        ownerId: String,
+        originalFileName: String?,
+        contentType: String?,
+        input: InputStream,
+    ): UploadedFileResponse {
+        val extension = safeImageExtension(originalFileName, contentType)
+        val relativePath = normalizeRelative("items/$ownerId/uploads/${UUID.randomUUID()}$extension")
+        val targetPath = rootDir.resolve(relativePath).normalize()
+        if (!targetPath.startsWith(rootDir)) {
+            throw badRequest("Invalid upload path")
+        }
+
+        Files.createDirectories(targetPath.parent)
+        val sizeBytes = copyWithLimit(input, targetPath)
+
+        return UploadedFileResponse(
+            storagePath = relativePath,
+            downloadUrl = resolveReference(relativePath),
+            contentType = contentType,
+            sizeBytes = sizeBytes,
+        )
+    }
 
     private fun resolveReference(reference: String): String {
         val trimmed = reference.trim()
@@ -66,6 +95,44 @@ class LocalStorageService(
         }
 
         return parts.joinToString("/")
+    }
+
+    private fun safeImageExtension(originalFileName: String?, contentType: String?): String {
+        val normalizedContentType = contentType?.lowercase()?.substringBefore(';')?.trim()
+        val extensionFromName = originalFileName
+            ?.substringAfterLast('.', missingDelimiterValue = "")
+            ?.lowercase()
+            ?.takeIf { it.matches(Regex("[a-z0-9]{1,8}")) }
+
+        val extension = when {
+            normalizedContentType == "image/jpeg" -> "jpg"
+            normalizedContentType == "image/png" -> "png"
+            normalizedContentType == "image/webp" -> "webp"
+            normalizedContentType == "image/gif" -> "gif"
+            extensionFromName in setOf("jpg", "jpeg", "png", "webp", "gif") -> extensionFromName
+            else -> throw badRequest("Only JPG, PNG, WEBP or GIF images can be uploaded")
+        }
+
+        return ".$extension"
+    }
+
+    private fun copyWithLimit(input: InputStream, targetPath: Path): Long {
+        var total = 0L
+        val buffer = ByteArray(DEFAULT_BUFFER_SIZE)
+        Files.newOutputStream(targetPath).use { output ->
+            while (true) {
+                val read = input.read(buffer)
+                if (read < 0) break
+                total += read
+                if (total > MAX_UPLOAD_BYTES) {
+                    output.close()
+                    Files.deleteIfExists(targetPath)
+                    throw badRequest("Image uploads cannot be larger than 5 MB")
+                }
+                output.write(buffer, 0, read)
+            }
+        }
+        return total
     }
 
     private fun encodePath(relativePath: String): String =

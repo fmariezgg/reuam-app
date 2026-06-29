@@ -36,6 +36,7 @@ suspend fun Application.configureDatabase() {
             categories = CategoryService(categoryRepository),
             items = ItemService(itemRepository, categoryRepository, localStorage),
             exchangeRequests = ExchangeRequestService(exchangeRequestRepository, itemRepository),
+            localStorage = localStorage,
         )
     )
 }

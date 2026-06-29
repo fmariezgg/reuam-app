@@ -101,7 +101,8 @@ fun AppNavigation() {
 
         composable(Routes.ArticleList.route) {
             ArticleListScreen(
-                onBackClick = { navController.popBackStack() }
+                onBackClick = { navController.popBackStack() },
+                onArticleClick = { itemId -> navController.navigate(Routes.ArticleDetail.createRoute(itemId)) }
             )
         }
 
@@ -172,6 +173,7 @@ fun AppNavigation() {
 
         composable(Routes.Requests.route) {
             RequestsScreen(
+                onBackClick = { navController.popBackStack() },
                 onArticleClick = { itemId -> navController.navigate(Routes.ArticleDetail.createRoute(itemId)) }
             )
         }
@@ -186,6 +188,7 @@ fun AppNavigation() {
         composable(Routes.Profile.route) {
             val context = LocalContext.current
             ProfileScreen(
+                onBackClick = { navController.popBackStack() },
                 onLogoutClick = {
                     authViewModel.signOut(context)
                     navController.navigate(Routes.Welcome.route) {

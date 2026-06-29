@@ -1,12 +1,15 @@
 package ni.uam.edu.routes
 
 import io.ktor.http.HttpStatusCode
+import io.ktor.http.content.PartData
+import io.ktor.http.content.forEachPart
 import io.ktor.openapi.Response
 import io.ktor.openapi.jsonSchema
 import io.ktor.server.application.Application
 import io.ktor.server.application.ApplicationCall
 import io.ktor.server.auth.authenticate
 import io.ktor.server.auth.principal
+import io.ktor.server.request.receiveMultipart
 import io.ktor.server.response.respond
 import io.ktor.server.routing.Route
 import io.ktor.server.routing.delete
@@ -18,6 +21,9 @@ import io.ktor.server.routing.route
 import io.ktor.server.routing.routing
 import io.ktor.server.routing.openapi.describe
 import io.ktor.utils.io.ExperimentalKtorApi
+import io.ktor.utils.io.jvm.javaio.toInputStream
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import ni.uam.edu.mapping.toResponse
 import ni.uam.edu.models.AuthenticatedUser
 import ni.uam.edu.models.BackendErrorResponse
@@ -35,6 +41,7 @@ import ni.uam.edu.services.dto.ItemResponse
 import ni.uam.edu.services.dto.UpdateExchangeRequestStatusRequest
 import ni.uam.edu.services.dto.UpdateItemRequest
 import ni.uam.edu.services.dto.UpdateProfilePhotoRequest
+import ni.uam.edu.services.dto.UploadedFileResponse
 import ni.uam.edu.services.dto.UpsertUserProfileRequest
 import ni.uam.edu.services.dto.UserProfileResponse
 import ni.uam.edu.services.dto.receiveWithValidation
@@ -172,6 +179,24 @@ fun Application.configureReuamRoutes(services: ReuamServices) {
                     firebaseSecurity()
                     jsonRequest<CreateCategoryRequest>()
                     createdResponse<CategoryResponse>("Category created")
+                }
+
+                post("/uploads/item-photo") {
+                    val profile = call.currentProfile(services)
+                    val upload = call.receiveSingleItemPhotoUpload(profile.id.toString(), services)
+                    call.respond(HttpStatusCode.Created, upload)
+                }.describe {
+                    tag("Uploads")
+                    operationId = "uploadItemPhoto"
+                    summary = "Upload an item photo"
+                    firebaseSecurity()
+                    responses {
+                        HttpStatusCode.Created {
+                            description = "File uploaded"
+                            schema = jsonSchema<UploadedFileResponse>()
+                        }
+                        defaultError()
+                    }
                 }
 
                 get("/users/me/items") {
@@ -340,6 +365,34 @@ private fun ApplicationCall.authenticatedUser(): AuthenticatedUser =
 
 private fun ApplicationCall.pathParameter(name: String): String =
     parameters[name] ?: throw badRequest("$name path parameter is required")
+
+private suspend fun ApplicationCall.receiveSingleItemPhotoUpload(
+    ownerId: String,
+    services: ReuamServices,
+): UploadedFileResponse {
+    var upload: UploadedFileResponse? = null
+    receiveMultipart().forEachPart { part ->
+        try {
+            if (part is PartData.FileItem && part.name == "file") {
+                if (upload != null) throw badRequest("Only one file can be uploaded per request")
+                upload = withContext(Dispatchers.IO) {
+                    part.provider().toInputStream().use { input ->
+                        services.localStorage.saveItemPhotoUpload(
+                            ownerId = ownerId,
+                            originalFileName = part.originalFileName,
+                            contentType = part.contentType?.toString(),
+                            input = input,
+                        )
+                    }
+                }
+            }
+        } finally {
+            part.release()
+        }
+    }
+
+    return upload ?: throw badRequest("A multipart file field named 'file' is required")
+}
 
 @OptIn(ExperimentalKtorApi::class)
 private fun io.ktor.openapi.Operation.Builder.firebaseSecurity() {

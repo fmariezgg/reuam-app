@@ -8,15 +8,19 @@ import ni.edu.uam.reuam.data.remote.dto.ItemResponse
 import ni.edu.uam.reuam.data.remote.dto.UpdateExchangeRequestStatusRequest
 import ni.edu.uam.reuam.data.remote.dto.UpdateItemRequest
 import ni.edu.uam.reuam.data.remote.dto.UpdateProfilePhotoRequest
+import ni.edu.uam.reuam.data.remote.dto.UploadedFileResponse
 import ni.edu.uam.reuam.data.remote.dto.UpsertUserProfileRequest
 import ni.edu.uam.reuam.data.remote.dto.UserProfileResponse
+import okhttp3.MultipartBody
 import retrofit2.Response
 import retrofit2.http.Body
 import retrofit2.http.DELETE
 import retrofit2.http.GET
+import retrofit2.http.Multipart
 import retrofit2.http.PATCH
 import retrofit2.http.PUT
 import retrofit2.http.POST
+import retrofit2.http.Part
 import retrofit2.http.Path
 
 /**
@@ -60,6 +64,10 @@ interface ReuamApiService {
 
     @POST("items")
     suspend fun createItem(@Body request: CreateItemRequest): Response<ItemResponse>
+
+    @Multipart
+    @POST("uploads/item-photo")
+    suspend fun uploadItemPhoto(@Part file: MultipartBody.Part): Response<UploadedFileResponse>
 
     @PUT("items/{id}")
     suspend fun updateItem(

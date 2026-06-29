@@ -1,5 +1,8 @@
 package ni.edu.uam.reuam.presentation.articles
 
+import android.content.Context
+import android.net.Uri
+import android.provider.OpenableColumns
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
@@ -17,6 +20,7 @@ import ni.edu.uam.reuam.data.remote.ApiException
 import ni.edu.uam.reuam.data.remote.dto.CategoryResponse
 import ni.edu.uam.reuam.data.remote.dto.CreateItemRequest
 import ni.edu.uam.reuam.data.remote.dto.ItemCondition
+import ni.edu.uam.reuam.data.remote.dto.ItemPhotoInput
 import ni.edu.uam.reuam.data.remote.dto.ItemResponse
 import ni.edu.uam.reuam.data.remote.dto.ItemTransactionType
 import ni.edu.uam.reuam.data.remote.dto.UpdateItemRequest
@@ -32,9 +36,16 @@ data class PublishFormState(
     val transactionType: ItemTransactionType = ItemTransactionType.DONATION,
     val priceText: String = "",
     val location: String = "",
+    val existingPhotos: List<ItemPhotoInput> = emptyList(),
+    val selectedPhotos: List<SelectedPhoto> = emptyList(),
     // field_errors que mandó el backend en el último intento de publicar,
     // por nombre de campo — para subrayar en rojo el TextField que falló.
     val fieldErrors: Map<String, String> = emptyMap(),
+)
+
+data class SelectedPhoto(
+    val uri: Uri,
+    val displayName: String,
 )
 
 class PublishArticleViewModel(
@@ -98,6 +109,15 @@ class PublishArticleViewModel(
                         transactionType = item.transactionType,
                         priceText = item.priceCents?.toString() ?: "",
                         location = item.location.orEmpty(),
+                        existingPhotos = item.photos
+                            .sortedBy { photo -> photo.sortOrder }
+                            .mapIndexed { index, photo ->
+                                ItemPhotoInput(
+                                    storagePath = photo.storagePath,
+                                    downloadUrl = photo.downloadUrl,
+                                    sortOrder = index,
+                                )
+                            },
                     )
                 }
                 pendingCategoryId = item.categoryId
@@ -160,6 +180,39 @@ class PublishArticleViewModel(
         }
     }
     fun onLocationChange(value: String) = _formState.update { it.copy(location = value) }
+    fun onPhotoUrisSelected(context: Context, uris: List<Uri>) {
+        if (uris.isEmpty()) return
+        _formState.update { state ->
+            val existingCount = state.existingPhotos.size
+            val remainingSlots = (8 - existingCount - state.selectedPhotos.size).coerceAtLeast(0)
+            val selected = uris
+                .take(remainingSlots)
+                .map { uri ->
+                    SelectedPhoto(
+                        uri = uri,
+                        displayName = context.contentResolver.displayName(uri) ?: "Imagen seleccionada",
+                    )
+                }
+            val error = if (uris.size > remainingSlots) {
+                mapOf("photos" to "Puedes publicar hasta 8 fotos por artículo")
+            } else {
+                emptyMap()
+            }
+            state.copy(
+                selectedPhotos = state.selectedPhotos + selected,
+                fieldErrors = (state.fieldErrors - "photos") + error,
+            )
+        }
+    }
+
+    fun removeSelectedPhoto(uri: Uri) {
+        _formState.update { state ->
+            state.copy(
+                selectedPhotos = state.selectedPhotos.filterNot { it.uri == uri },
+                fieldErrors = state.fieldErrors - "photos",
+            )
+        }
+    }
 
     /**
      * Valida localmente lo mínimo antes de llamar al backend (campos vacíos
@@ -173,6 +226,9 @@ class PublishArticleViewModel(
         if (form.transactionType == ItemTransactionType.SYMBOLIC_SALE && form.priceText.isBlank()) {
             errors["priceCents"] = "Indica un precio simbólico"
         }
+        if (form.existingPhotos.size + form.selectedPhotos.size > 8) {
+            errors["photos"] = "Puedes publicar hasta 8 fotos por artículo"
+        }
         return errors
     }
 
@@ -180,7 +236,7 @@ class PublishArticleViewModel(
      * Publica un artículo nuevo (POST) o guarda los cambios de uno existente
      * (PUT), según si esta instancia se abrió en modo edición o no.
      */
-    fun publish(onSuccess: (ItemResponse) -> Unit, onError: (String) -> Unit) {
+    fun publish(context: Context, onSuccess: (ItemResponse) -> Unit, onError: (String) -> Unit) {
         val form = _formState.value
         val localErrors = validateLocally(form)
         if (localErrors.isNotEmpty()) {
@@ -191,6 +247,16 @@ class PublishArticleViewModel(
         viewModelScope.launch {
             _isPublishing.value = true
             try {
+                val uploadedPhotos = form.selectedPhotos.mapIndexed { index, selectedPhoto ->
+                    val upload = itemRepository.uploadItemPhoto(context.applicationContext, selectedPhoto.uri)
+                    ItemPhotoInput(
+                        storagePath = upload.storagePath,
+                        downloadUrl = upload.downloadUrl,
+                        sortOrder = form.existingPhotos.size + index,
+                    )
+                }
+                val photos = (form.existingPhotos + uploadedPhotos)
+                    .mapIndexed { index, photo -> photo.copy(sortOrder = index) }
                 val result = if (editingItemId != null) {
                     itemRepository.updateItem(
                         editingItemId,
@@ -202,6 +268,7 @@ class PublishArticleViewModel(
                             transactionType = form.transactionType,
                             priceCents = form.priceText.toLongOrNull(),
                             location = form.location.trim().ifBlank { null },
+                            photos = photos,
                         )
                     )
                 } else {
@@ -214,6 +281,7 @@ class PublishArticleViewModel(
                             transactionType = form.transactionType,
                             priceCents = form.priceText.toLongOrNull(),
                             location = form.location.trim().ifBlank { null },
+                            photos = photos,
                         )
                     )
                 }
@@ -249,3 +317,9 @@ class PublishArticleViewModel(
         }
     }
 }
+
+private fun android.content.ContentResolver.displayName(uri: Uri): String? =
+    query(uri, arrayOf(OpenableColumns.DISPLAY_NAME), null, null, null)?.use { cursor ->
+        val nameIndex = cursor.getColumnIndex(OpenableColumns.DISPLAY_NAME)
+        if (nameIndex >= 0 && cursor.moveToFirst()) cursor.getString(nameIndex) else null
+    } ?: uri.lastPathSegment

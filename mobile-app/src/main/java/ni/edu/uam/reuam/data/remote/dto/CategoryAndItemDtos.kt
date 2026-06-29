@@ -55,6 +55,13 @@ data class ItemPhotoResponse(
     @SerializedName("createdAt") val createdAt: Long,
 )
 
+data class UploadedFileResponse(
+    @SerializedName("storagePath") val storagePath: String,
+    @SerializedName("downloadUrl") val downloadUrl: String,
+    @SerializedName("contentType") val contentType: String? = null,
+    @SerializedName("sizeBytes") val sizeBytes: Long,
+)
+
 // ───────────────────────────── Item ─────────────────────────────────────
 
 data class CreateItemRequest(

@@ -113,6 +113,14 @@ data class ItemPhotoResponse(
 )
 
 @Serializable
+data class UploadedFileResponse(
+    val storagePath: String,
+    val downloadUrl: String,
+    val contentType: String? = null,
+    val sizeBytes: Long,
+)
+
+@Serializable
 data class CreateItemRequest(
     val title: String,
     val description: String,

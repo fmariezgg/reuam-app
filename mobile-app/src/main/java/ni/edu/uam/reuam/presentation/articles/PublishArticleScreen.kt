@@ -1,19 +1,30 @@
 package ni.edu.uam.reuam.presentation.articles
 
+import android.net.Uri
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.outlined.AddPhotoAlternate
+import androidx.compose.material.icons.outlined.Close
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExposedDropdownMenuBox
 import androidx.compose.material3.ExposedDropdownMenuDefaults
 import androidx.compose.material3.ExposedDropdownMenuAnchorType
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
@@ -29,6 +40,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import kotlinx.coroutines.launch
@@ -49,6 +61,7 @@ fun PublishArticleScreen(
     onPublished: () -> Unit = onBackClick,
     viewModel: PublishArticleViewModel = viewModel(factory = PublishArticleViewModel.Factory),
 ) {
+    val context = LocalContext.current
     val categoriesState by viewModel.categoriesState.collectAsState()
     val formState by viewModel.formState.collectAsState()
     val isPublishing by viewModel.isPublishing.collectAsState()
@@ -62,7 +75,12 @@ fun PublishArticleScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text(if (isEditMode) "Editar artículo" else "Publicar artículo") }
+                title = { Text(if (isEditMode) "Editar artículo" else "Publicar artículo") },
+                navigationIcon = {
+                    IconButton(onClick = onBackClick) {
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Volver")
+                    }
+                }
             )
         },
         snackbarHost = { SnackbarHost(snackbarHostState) }
@@ -99,8 +117,11 @@ fun PublishArticleScreen(
                     onTransactionTypeSelected = viewModel::onTransactionTypeSelected,
                     onPriceChange = viewModel::onPriceChange,
                     onLocationChange = viewModel::onLocationChange,
+                    onPhotosSelected = { viewModel.onPhotoUrisSelected(context, it) },
+                    onRemoveSelectedPhoto = viewModel::removeSelectedPhoto,
                     onPublishClick = {
                         viewModel.publish(
+                            context = context,
                             onSuccess = {
                                 coroutineScope.launch {
                                     val message = if (isEditMode) "Cambios guardados" else "¡Artículo publicado!"
@@ -134,6 +155,8 @@ private fun PublishForm(
     onTransactionTypeSelected: (ItemTransactionType) -> Unit,
     onPriceChange: (String) -> Unit,
     onLocationChange: (String) -> Unit,
+    onPhotosSelected: (List<Uri>) -> Unit,
+    onRemoveSelectedPhoto: (Uri) -> Unit,
     onPublishClick: () -> Unit,
     onBackClick: () -> Unit,
 ) {
@@ -213,6 +236,13 @@ private fun PublishForm(
             modifier = Modifier.padding(bottom = 24.dp)
         )
 
+        PhotoPickerSection(
+            formState = formState,
+            onPhotosSelected = onPhotosSelected,
+            onRemoveSelectedPhoto = onRemoveSelectedPhoto,
+        )
+        Box(modifier = Modifier.padding(bottom = 24.dp))
+
         if (isPublishing) {
             Box(modifier = Modifier.fillMaxWidth()) {
                 CircularProgressIndicator(modifier = Modifier.padding(bottom = 16.dp))
@@ -229,6 +259,84 @@ private fun PublishForm(
             modifier = Modifier.padding(top = 12.dp)
         ) {
             Text("Cancelar")
+        }
+    }
+}
+
+@Composable
+private fun PhotoPickerSection(
+    formState: PublishFormState,
+    onPhotosSelected: (List<Uri>) -> Unit,
+    onRemoveSelectedPhoto: (Uri) -> Unit,
+) {
+    val launcher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.GetMultipleContents(),
+        onResult = onPhotosSelected,
+    )
+    val totalPhotos = formState.existingPhotos.size + formState.selectedPhotos.size
+
+    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        Text(
+            text = "Fotos del artículo",
+            style = androidx.compose.material3.MaterialTheme.typography.titleSmall,
+        )
+        Text(
+            text = "$totalPhotos de 8 fotos seleccionadas",
+            style = androidx.compose.material3.MaterialTheme.typography.bodySmall,
+        )
+
+        OutlinedButton(
+            onClick = { launcher.launch("image/*") },
+            enabled = totalPhotos < 8,
+        ) {
+            Icon(
+                imageVector = Icons.Outlined.AddPhotoAlternate,
+                contentDescription = null,
+                modifier = Modifier.size(18.dp),
+            )
+            Text(
+                text = "Agregar fotos",
+                modifier = Modifier.padding(start = 8.dp),
+            )
+        }
+
+        formState.fieldErrors["photos"]?.let { error ->
+            Text(
+                text = error,
+                color = androidx.compose.material3.MaterialTheme.colorScheme.error,
+                style = androidx.compose.material3.MaterialTheme.typography.bodySmall,
+            )
+        }
+
+        if (formState.existingPhotos.isNotEmpty()) {
+            Text(
+                text = "${formState.existingPhotos.size} foto(s) guardada(s) en este artículo",
+                style = androidx.compose.material3.MaterialTheme.typography.bodySmall,
+            )
+        }
+
+        formState.selectedPhotos.forEach { photo ->
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+            ) {
+                Text(
+                    text = photo.displayName,
+                    modifier = Modifier
+                        .weight(1f)
+                        .padding(end = 8.dp),
+                    style = androidx.compose.material3.MaterialTheme.typography.bodyMedium,
+                )
+                IconButton(
+                    onClick = { onRemoveSelectedPhoto(photo.uri) },
+                    modifier = Modifier.size(32.dp),
+                ) {
+                    Icon(
+                        imageVector = Icons.Outlined.Close,
+                        contentDescription = "Quitar foto",
+                    )
+                }
+            }
         }
     }
 }
