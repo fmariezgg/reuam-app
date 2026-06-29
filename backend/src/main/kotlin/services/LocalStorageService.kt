@@ -156,7 +156,9 @@ class LocalStorageService(
     companion object {
         fun fromApplication(application: Application): LocalStorageService {
             val rootDir = application.getenvOrConfig("LOCAL_STORAGE_DIR", "storage.localDir")
-            val publicBaseUrl = application.getenvOrConfig("LOCAL_STORAGE_PUBLIC_BASE_URL", "storage.publicBaseUrl")
+            val publicBaseUrl = System.getenv("LOCAL_STORAGE_PUBLIC_BASE_URL")
+                ?: System.getenv("RAILWAY_PUBLIC_DOMAIN")?.let { "https://$it" }
+                ?: application.environment.config.property("storage.publicBaseUrl").getString()
             return LocalStorageService(
                 rootDir = Paths.get(rootDir).toAbsolutePath().normalize(),
                 publicBaseUrl = publicBaseUrl,

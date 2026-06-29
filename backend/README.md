@@ -35,6 +35,7 @@ El backend lee primero variables de entorno y, si no existen, usa los valores de
 | `DATABASE_PASSWORD` | Si | Password de la base de datos |
 | `LOCAL_STORAGE_DIR` | No | Carpeta local donde se guardan/leen imagenes. Por defecto: `./storage` |
 | `LOCAL_STORAGE_PUBLIC_BASE_URL` | No | URL publica que Android usa para leer imagenes locales. Por defecto: `http://10.0.2.2:8080` |
+| `FIREBASE_ADMIN_JSON` | Si | Contenido completo del JSON del Firebase Admin SDK. En local tambien puedes usar `firebase-adminsdk.json`. |
 
 Para desarrollo local, el proyecto usa H2 en modo compatible con Postgres:
 
@@ -45,7 +46,48 @@ database:
   password: ""
 ```
 
-Para Cloud SQL PostgreSQL, configura `DATABASE_URL`, `DATABASE_USER` y `DATABASE_PASSWORD` en el runtime donde despliegues el backend.
+Para Cloud SQL PostgreSQL o Railway PostgreSQL, configura `DATABASE_URL`, `DATABASE_USER` y `DATABASE_PASSWORD` en el runtime donde despliegues el backend. Si Railway entrega `DATABASE_URL` como `postgresql://USER:PASSWORD@HOST:PORT/DB`, el backend la convierte automaticamente a R2DBC.
+
+## Deploy En Railway
+
+El repo incluye `railway.toml` en la raiz. Railway ejecuta el backend desde la carpeta `backend`, construye con:
+
+```bash
+./gradlew installDist
+```
+
+Y arranca con el puerto dinamico de Railway:
+
+```bash
+./build/install/reuam-app/bin/reuam-app -host=0.0.0.0 -port=$PORT
+```
+
+Variables recomendadas para Railway:
+
+```text
+LOCAL_STORAGE_DIR=/data/storage
+FIREBASE_ADMIN_JSON={...contenido del JSON de Firebase Admin SDK...}
+```
+
+Si usas Railway PostgreSQL, conecta la base y deja disponible `DATABASE_URL`. El backend acepta URLs `postgresql://...`, `postgres://...`, `jdbc:postgresql://...` y `r2dbc:postgresql://...`.
+
+Para imagenes, agrega un Railway Volume montado en:
+
+```text
+/data
+```
+
+Con ese volume, `LOCAL_STORAGE_DIR=/data/storage` hace que las fotos sobrevivan redeploys. Si no defines `LOCAL_STORAGE_PUBLIC_BASE_URL`, el backend usa automaticamente:
+
+```text
+https://${RAILWAY_PUBLIC_DOMAIN}
+```
+
+Luego instala Android debug apuntando al dominio publico:
+
+```powershell
+.\gradlew.bat :mobile-app:installDebug -PREUAM_BASE_URL=https://TU-DOMINIO.up.railway.app/api/v1/
+```
 
 ## Firebase Authentication
 
@@ -61,7 +103,7 @@ Para que el backend valide tokens reales, coloca el archivo de credenciales del 
 firebase-adminsdk.json
 ```
 
-Si el archivo no existe, el servidor arranca, pero las rutas protegidas responden `401 Unauthorized`. Esto permite desarrollo local de rutas publicas sin exponer un modo inseguro.
+En Railway no subas ese archivo al repo. Usa `FIREBASE_ADMIN_JSON` con el contenido completo del JSON. Si no existe ni el archivo local ni la variable, el servidor arranca, pero las rutas protegidas responden `401 Unauthorized`. Esto permite desarrollo local de rutas publicas sin exponer un modo inseguro.
 
 ## Almacenamiento Local De Imagenes
 
@@ -154,6 +196,7 @@ Endpoints protegidos principales:
 - `PUT /api/v1/profiles/me`
 - `PATCH /api/v1/profiles/me/photo`
 - `POST /api/v1/items`
+- `POST /api/v1/uploads/item-photo`
 - `PUT /api/v1/items/{id}`
 - `DELETE /api/v1/items/{id}`
 - `POST /api/v1/exchange-requests`

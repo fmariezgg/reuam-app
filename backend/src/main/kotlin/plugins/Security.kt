@@ -3,14 +3,16 @@ package ni.uam.edu.plugins
 import io.ktor.server.application.*
 import io.ktor.server.auth.*
 import io.ktor.server.routing.openapi.registerBearerAuthSecurityScheme
-import java.io.File
 import com.kborowy.authprovider.firebase.firebase
 import ni.uam.edu.models.AuthenticatedUser
+import java.io.File
+import java.nio.file.Files
 
 const val FIREBASE_AUTH_PROVIDER = "firebase"
+private const val FIREBASE_ADMIN_JSON_ENV = "FIREBASE_ADMIN_JSON"
 
 fun Application.configureSecurity() {
-    val myAdminFile = File("firebase-adminsdk.json")
+    val adminFile = resolveFirebaseAdminFile()
 
     registerBearerAuthSecurityScheme(
         name = FIREBASE_AUTH_PROVIDER,
@@ -19,10 +21,10 @@ fun Application.configureSecurity() {
     )
 
     install(Authentication) {
-        if (myAdminFile.exists()) {
+        if (adminFile?.exists() == true) {
             firebase(FIREBASE_AUTH_PROVIDER) {
                 setup {
-                    adminFile = myAdminFile
+                    this.adminFile = adminFile
                 }
                 realm = "ReUAM API"
                 validate { token ->
@@ -43,4 +45,19 @@ fun Application.configureSecurity() {
             }
         }
     }
+}
+
+private fun resolveFirebaseAdminFile(): File? {
+    val jsonFromEnv = System.getenv(FIREBASE_ADMIN_JSON_ENV)
+        ?.trim()
+        ?.takeIf { it.isNotEmpty() }
+
+    if (jsonFromEnv != null) {
+        val tempFile = Files.createTempFile("firebase-adminsdk", ".json").toFile()
+        tempFile.writeText(jsonFromEnv)
+        tempFile.deleteOnExit()
+        return tempFile
+    }
+
+    return File("firebase-adminsdk.json").takeIf { it.exists() }
 }
