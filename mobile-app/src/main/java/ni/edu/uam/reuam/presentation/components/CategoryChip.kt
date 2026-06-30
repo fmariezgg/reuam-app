@@ -1,6 +1,5 @@
 package ni.edu.uam.reuam.presentation.components
 
-import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.*
@@ -21,15 +20,14 @@ fun CategoryChip(
     icon: ImageVector? = null
 ) {
     val containerColor = if (isActive) ReUAMGreen else ReUAMSurface
-    val contentColor  = if (isActive) ReUAMSurface else ReUAMTextSecondary
-    val borderColor   = if (isActive) ReUAMGreen else ReUAMGreenSoft
+    val contentColor = if (isActive) ReUAMSurface else ReUAMTextSecondary
 
     Surface(
         onClick = onClick,
         shape = CircleShape,
         color = containerColor,
+        shadowElevation = if (isActive) 2.dp else 0.dp,
         modifier = modifier
-            .border(width = 1.dp, color = borderColor, shape = CircleShape)
     ) {
         Row(
             modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
@@ -44,6 +42,7 @@ fun CategoryChip(
                     tint = contentColor
                 )
             }
+
             Text(
                 text = label,
                 fontSize = 13.sp,
