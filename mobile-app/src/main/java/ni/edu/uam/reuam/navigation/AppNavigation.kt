@@ -15,6 +15,7 @@ import ni.edu.uam.reuam.presentation.articles.ArticleListScreen
 import ni.edu.uam.reuam.presentation.articles.ItemDetailScreen
 import ni.edu.uam.reuam.presentation.articles.MyPublicationsScreen
 import ni.edu.uam.reuam.presentation.articles.PublishArticleScreen
+import ni.edu.uam.reuam.presentation.admin.AdminPanelScreen
 import ni.edu.uam.reuam.presentation.auth.AuthViewModel
 import ni.edu.uam.reuam.presentation.auth.LoginScreen
 import ni.edu.uam.reuam.presentation.auth.SplashScreen
@@ -181,7 +182,16 @@ fun AppNavigation() {
         composable(Routes.MyPublications.route) {
             MyPublicationsScreen(
                 onBackClick = { navController.popBackStack() },
-                onArticleClick = { itemId -> navController.navigate(Routes.ArticleDetail.createRoute(itemId)) }
+                onArticleClick = { itemId -> navController.navigate(Routes.ArticleDetail.createRoute(itemId)) },
+                onPublishClick = { navController.navigate(Routes.PublishArticle.route) },
+                onEditArticleClick = { itemId -> navController.navigate(Routes.EditArticle.createRoute(itemId)) },
+            )
+        }
+
+        composable(Routes.AdminPanel.route) {
+            AdminPanelScreen(
+                onBackClick = { navController.popBackStack() },
+                isAdmin = true,
             )
         }
 
@@ -196,6 +206,8 @@ fun AppNavigation() {
                     }
                 },
                 onMyPublicationsClick = { navController.navigate(Routes.MyPublications.route) },
+                onRequestsClick = { navController.navigate(Routes.Requests.route) },
+                onAdminPanelClick = { navController.navigate(Routes.AdminPanel.route) },
             )
         }
     }
