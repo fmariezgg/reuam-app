@@ -222,7 +222,7 @@ private fun HomeContent(
                         label    = "Todos",
                         isActive = activeCategoryId == ALL_CATEGORIES_ID,
                         onClick  = { onCategorySelected(ALL_CATEGORIES_ID) },
-                        icon     = Icons.Outlined.MoreHoriz
+                        icon     = null
                     )
                 }
                 items(categories) { cat ->
