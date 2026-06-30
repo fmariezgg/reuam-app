@@ -10,7 +10,8 @@ plugins {
 
 val isRailwayBuild = System.getenv("RAILWAY_ENVIRONMENT") != null ||
     System.getenv("RAILWAY_PROJECT_ID") != null ||
-    System.getenv("RAILWAY_SERVICE_ID") != null
+    System.getenv("RAILWAY_SERVICE_ID") != null ||
+    providers.gradleProperty("production").isPresent
 
 if (isRailwayBuild) {
     if (tasks.findByName("test") == null) {

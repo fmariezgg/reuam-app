@@ -26,7 +26,8 @@ rootProject.name = "ReUAM"
 
 val isRailwayBuild = System.getenv("RAILWAY_ENVIRONMENT") != null ||
     System.getenv("RAILWAY_PROJECT_ID") != null ||
-    System.getenv("RAILWAY_SERVICE_ID") != null
+    System.getenv("RAILWAY_SERVICE_ID") != null ||
+    startParameter.projectProperties.containsKey("production")
 
 if (isRailwayBuild) {
     includeBuild("backend")
