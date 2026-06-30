@@ -189,12 +189,16 @@ class ExposedItemRepository(private val database: R2dbcDatabase) : ItemRepositor
             status != null -> ItemsTable.selectAll()
                 .where { ItemsTable.status eq status }
             else -> ItemsTable.selectAll()
-        }.map { row ->
-            val itemId = UUID.fromString(row[ItemsTable.id])
-            row.toItem(findPhotosByItemId(itemId))
         }.toList()
 
-        rows.sortedByDescending { it.createdAt }
+        val photosByItemId = findPhotosByItemIds(
+            rows.map { row -> UUID.fromString(row[ItemsTable.id]) }.toSet()
+        )
+
+        rows.map { row ->
+            val itemId = UUID.fromString(row[ItemsTable.id])
+            row.toItem(photosByItemId[itemId].orEmpty())
+        }.sortedByDescending { it.createdAt }
     }
 
     override suspend fun update(item: Item): Item = suspendTransaction(database) {
@@ -226,6 +230,17 @@ class ExposedItemRepository(private val database: R2dbcDatabase) : ItemRepositor
             .map { it.toItemPhoto() }
             .toList()
             .sortedBy { it.sortOrder }
+
+    private suspend fun findPhotosByItemIds(itemIds: Set<UUID>): Map<UUID, List<ItemPhoto>> {
+        if (itemIds.isEmpty()) return emptyMap()
+
+        return ItemPhotosTable.selectAll()
+            .map { it.toItemPhoto() }
+            .toList()
+            .filter { it.itemId in itemIds }
+            .groupBy { it.itemId }
+            .mapValues { (_, photos) -> photos.sortedBy { it.sortOrder } }
+    }
 
     private suspend fun replacePhotos(itemId: UUID, photos: List<ItemPhoto>) {
         ItemPhotosTable.deleteWhere { ItemPhotosTable.itemId eq itemId.toString() }

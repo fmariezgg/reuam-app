@@ -26,7 +26,7 @@ android {
         // compila con -PREUAM_BASE_URL=http://IP_DE_TU_PC:8080/api/v1/
         val apiBaseUrl = providers.gradleProperty("REUAM_BASE_URL")
             .orElse(providers.environmentVariable("REUAM_BASE_URL"))
-            .orElse("http://10.0.2.2:8080/api/v1/")
+            .orElse("https://reuam-app-production.up.railway.app/api/v1/")
             .get()
             .trim()
             .let { if (it.endsWith("/")) it else "$it/" }
