@@ -1,24 +1,35 @@
 package ni.edu.uam.reuam.presentation.requests
 
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.Description
+import androidx.compose.material.icons.filled.MarkEmailUnread
+import androidx.compose.material.icons.filled.Outbox
+import androidx.compose.material.icons.filled.Visibility
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -26,8 +37,6 @@ import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
-import androidx.compose.material3.Tab
-import androidx.compose.material3.TabRow
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
@@ -35,8 +44,11 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import kotlinx.coroutines.launch
@@ -45,8 +57,13 @@ import ni.edu.uam.reuam.data.remote.dto.ExchangeRequestStatus
 import ni.edu.uam.reuam.presentation.components.EmptyContent
 import ni.edu.uam.reuam.presentation.components.ErrorContent
 import ni.edu.uam.reuam.presentation.components.LoadingContent
+import ni.edu.uam.reuam.ui.theme.ReUAMAccent
 import ni.edu.uam.reuam.ui.theme.ReUAMBackground
+import ni.edu.uam.reuam.ui.theme.ReUAMError
 import ni.edu.uam.reuam.ui.theme.ReUAMGreen
+import ni.edu.uam.reuam.ui.theme.ReUAMGreenSoft
+import ni.edu.uam.reuam.ui.theme.ReUAMSurface
+import ni.edu.uam.reuam.ui.theme.ReUAMTextPrimary
 import ni.edu.uam.reuam.ui.theme.ReUAMTextSecondary
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -60,14 +77,22 @@ fun RequestsScreen(
     val sentState by viewModel.sentState.collectAsState()
     val receivedState by viewModel.receivedState.collectAsState()
     val processingIds by viewModel.processingIds.collectAsState()
-
     val snackbarHostState = remember { SnackbarHostState() }
     val coroutineScope = rememberCoroutineScope()
 
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Solicitudes") },
+                title = {
+                    Column {
+                        Text("Solicitudes")
+                        Text(
+                            text = "Gestiona intercambios y respuestas",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = ReUAMTextSecondary,
+                        )
+                    }
+                },
                 navigationIcon = {
                     IconButton(onClick = onBackClick) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Volver")
@@ -78,19 +103,17 @@ fun RequestsScreen(
         snackbarHost = { SnackbarHost(snackbarHostState) },
         containerColor = ReUAMBackground,
     ) { paddingValues ->
-        Column(modifier = Modifier.fillMaxSize().padding(paddingValues)) {
-            TabRow(selectedTabIndex = selectedTab.ordinal) {
-                Tab(
-                    selected = selectedTab == RequestsTab.RECEIVED,
-                    onClick = { viewModel.onTabSelected(RequestsTab.RECEIVED) },
-                    text = { Text("Recibidas") }
-                )
-                Tab(
-                    selected = selectedTab == RequestsTab.SENT,
-                    onClick = { viewModel.onTabSelected(RequestsTab.SENT) },
-                    text = { Text("Enviadas") }
-                )
-            }
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(paddingValues)
+        ) {
+            RequestsSegmentedTabs(
+                selectedTab = selectedTab,
+                sentState = sentState,
+                receivedState = receivedState,
+                onTabSelected = viewModel::onTabSelected,
+            )
 
             Box(modifier = Modifier.fillMaxSize()) {
                 when (selectedTab) {
@@ -99,45 +122,82 @@ fun RequestsScreen(
                         onRetry = { viewModel.loadReceived() },
                         emptyTitle = "Sin solicitudes recibidas",
                         emptyMessage = "Cuando alguien solicite uno de tus artículos, aparecerá aquí.",
-                        content = { requestUi ->
-                            ReceivedRequestCard(
-                                requestUi = requestUi,
-                                isProcessing = processingIds.contains(requestUi.request.id),
-                                onAccept = {
-                                    viewModel.respondToRequest(
-                                        requestUi, ExchangeRequestStatus.ACCEPTED
-                                    ) { msg -> coroutineScope.launch { snackbarHostState.showSnackbar(msg) } }
-                                },
-                                onReject = {
-                                    viewModel.respondToRequest(
-                                        requestUi, ExchangeRequestStatus.REJECTED
-                                    ) { msg -> coroutineScope.launch { snackbarHostState.showSnackbar(msg) } }
-                                },
-                                onClick = { onArticleClick(requestUi.request.itemId) }
-                            )
-                        }
-                    )
+                        leadingIcon = { Icon(Icons.Filled.MarkEmailUnread, contentDescription = null) },
+                    ) { requestUi ->
+                        RequestCard(
+                            requestUi = requestUi,
+                            isReceived = true,
+                            isProcessing = processingIds.contains(requestUi.request.id),
+                            onArticleClick = { onArticleClick(requestUi.request.itemId) },
+                            onAccept = {
+                                viewModel.respondToRequest(requestUi, ExchangeRequestStatus.ACCEPTED) { message ->
+                                    coroutineScope.launch { snackbarHostState.showSnackbar(message) }
+                                }
+                            },
+                            onReject = {
+                                viewModel.respondToRequest(requestUi, ExchangeRequestStatus.REJECTED) { message ->
+                                    coroutineScope.launch { snackbarHostState.showSnackbar(message) }
+                                }
+                            },
+                            onCancel = {},
+                        )
+                    }
 
                     RequestsTab.SENT -> RequestsTabContent(
                         state = sentState,
                         onRetry = { viewModel.loadSent() },
                         emptyTitle = "No has enviado solicitudes",
-                        emptyMessage = "Explora artículos en Home y solicita el que te interese.",
-                        content = { requestUi ->
-                            SentRequestCard(
-                                requestUi = requestUi,
-                                isProcessing = processingIds.contains(requestUi.request.id),
-                                onCancel = {
-                                    viewModel.cancelMyRequest(requestUi) { msg ->
-                                        coroutineScope.launch { snackbarHostState.showSnackbar(msg) }
-                                    }
+                        emptyMessage = "Explora artículos disponibles y envía una solicitud al que te interese.",
+                        leadingIcon = { Icon(Icons.Filled.Outbox, contentDescription = null) },
+                    ) { requestUi ->
+                        RequestCard(
+                            requestUi = requestUi,
+                            isReceived = false,
+                            isProcessing = processingIds.contains(requestUi.request.id),
+                            onArticleClick = { onArticleClick(requestUi.request.itemId) },
+                            onAccept = {},
+                            onReject = {},
+                            onCancel = {
+                                viewModel.cancelMyRequest(requestUi) { message ->
+                                    coroutineScope.launch { snackbarHostState.showSnackbar(message) }
                                 }
-                            ) { onArticleClick(requestUi.request.itemId) }
-                        }
-                    )
+                            },
+                        )
+                    }
                 }
             }
         }
+    }
+}
+
+@Composable
+private fun RequestsSegmentedTabs(
+    selectedTab: RequestsTab,
+    sentState: ApiResult<List<RequestUi>>,
+    receivedState: ApiResult<List<RequestUi>>,
+    onTabSelected: (RequestsTab) -> Unit,
+) {
+    val receivedCount = (receivedState as? ApiResult.Success)?.data?.size ?: 0
+    val sentCount = (sentState as? ApiResult.Success)?.data?.size ?: 0
+
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 20.dp, vertical = 12.dp),
+        horizontalArrangement = Arrangement.spacedBy(10.dp),
+    ) {
+        FilterChip(
+            selected = selectedTab == RequestsTab.RECEIVED,
+            onClick = { onTabSelected(RequestsTab.RECEIVED) },
+            label = { Text("Recibidas $receivedCount") },
+            leadingIcon = { Icon(Icons.Filled.MarkEmailUnread, contentDescription = null, modifier = Modifier.size(18.dp)) },
+        )
+        FilterChip(
+            selected = selectedTab == RequestsTab.SENT,
+            onClick = { onTabSelected(RequestsTab.SENT) },
+            label = { Text("Enviadas $sentCount") },
+            leadingIcon = { Icon(Icons.Filled.Outbox, contentDescription = null, modifier = Modifier.size(18.dp)) },
+        )
     }
 }
 
@@ -147,6 +207,7 @@ private fun RequestsTabContent(
     onRetry: () -> Unit,
     emptyTitle: String,
     emptyMessage: String,
+    leadingIcon: @Composable () -> Unit,
     content: @Composable (RequestUi) -> Unit,
 ) {
     when (state) {
@@ -156,14 +217,19 @@ private fun RequestsTabContent(
             if (state.data.isEmpty()) {
                 EmptyContent(title = emptyTitle, message = emptyMessage)
             } else {
-                Column(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .padding(16.dp)
-                        .verticalScroll(rememberScrollState()),
-                    verticalArrangement = Arrangement.spacedBy(12.dp),
+                LazyColumn(
+                    modifier = Modifier.fillMaxSize(),
+                    contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 20.dp, vertical = 8.dp),
+                    verticalArrangement = Arrangement.spacedBy(14.dp),
                 ) {
-                    state.data.forEach { requestUi -> content(requestUi) }
+                    item {
+                        RequestsInfoCard(
+                            title = emptyTitle.replace("Sin ", "").replace("No has enviado ", ""),
+                            count = state.data.size,
+                            icon = leadingIcon,
+                        )
+                    }
+                    items(state.data, key = { it.request.id }) { requestUi -> content(requestUi) }
                 }
             }
         }
@@ -171,44 +237,136 @@ private fun RequestsTabContent(
 }
 
 @Composable
-private fun ReceivedRequestCard(
-    requestUi: RequestUi,
-    isProcessing: Boolean,
-    onAccept: () -> Unit,
-    onReject: () -> Unit,
-    onClick: () -> Unit,
+private fun RequestsInfoCard(
+    title: String,
+    count: Int,
+    icon: @Composable () -> Unit,
 ) {
     Card(
-        onClick = onClick,
         modifier = Modifier.fillMaxWidth(),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+        shape = RoundedCornerShape(22.dp),
+        colors = CardDefaults.cardColors(containerColor = ReUAMSurface),
     ) {
-        Column(modifier = Modifier.padding(16.dp)) {
-            Text(requestUi.itemTitle, style = MaterialTheme.typography.titleMedium)
-            RequestStatusChip(requestUi.request.status)
+        Row(
+            modifier = Modifier.padding(16.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(12.dp),
+        ) {
+            Box(
+                modifier = Modifier
+                    .size(44.dp)
+                    .clip(RoundedCornerShape(14.dp))
+                    .background(ReUAMGreenSoft),
+                contentAlignment = Alignment.Center,
+            ) {
+                androidx.compose.runtime.CompositionLocalProvider(
+                    androidx.compose.material3.LocalContentColor provides ReUAMGreen,
+                    content = icon,
+                )
+            }
+            Column(modifier = Modifier.weight(1f)) {
+                Text(title.replaceFirstChar { it.uppercase() }, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
+                Text("$count solicitud${if (count == 1) "" else "es"} en esta sección", style = MaterialTheme.typography.bodySmall, color = ReUAMTextSecondary)
+            }
+        }
+    }
+}
 
-            if (!requestUi.request.message.isNullOrBlank()) {
+@Composable
+private fun RequestCard(
+    requestUi: RequestUi,
+    isReceived: Boolean,
+    isProcessing: Boolean,
+    onArticleClick: () -> Unit,
+    onAccept: () -> Unit,
+    onReject: () -> Unit,
+    onCancel: () -> Unit,
+) {
+    val request = requestUi.request
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable(onClick = onArticleClick),
+        shape = RoundedCornerShape(22.dp),
+        colors = CardDefaults.cardColors(containerColor = ReUAMSurface),
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
+    ) {
+        Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+            Row(verticalAlignment = Alignment.Top, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                Box(
+                    modifier = Modifier
+                        .size(44.dp)
+                        .clip(RoundedCornerShape(15.dp))
+                        .background(statusColor(request.status).copy(alpha = 0.13f)),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Icon(Icons.Filled.Description, contentDescription = null, tint = statusColor(request.status))
+                }
+                Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                    Text(
+                        text = requestUi.itemTitle,
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.SemiBold,
+                        color = ReUAMTextPrimary,
+                        maxLines = 2,
+                        overflow = TextOverflow.Ellipsis,
+                    )
+                    Text(
+                        text = if (isReceived) "Solicitud recibida" else "Solicitud enviada",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = ReUAMTextSecondary,
+                    )
+                }
+                RequestStatusPill(request.status)
+            }
+
+            if (!request.message.isNullOrBlank()) {
                 Text(
-                    text = "\"${requestUi.request.message}\"",
+                    text = if (isReceived) "Mensaje: ${request.message}" else "Tu mensaje: ${request.message}",
                     style = MaterialTheme.typography.bodyMedium,
                     color = ReUAMTextSecondary,
-                    modifier = Modifier.padding(top = 8.dp)
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clip(RoundedCornerShape(16.dp))
+                        .background(ReUAMBackground)
+                        .padding(12.dp),
                 )
             }
 
-            if (requestUi.request.status == ExchangeRequestStatus.PENDING) {
-                if (isProcessing) {
-                    CircularProgressIndicator(modifier = Modifier.padding(top = 12.dp))
-                } else {
-                    Row(
-                        modifier = Modifier.padding(top = 12.dp),
-                        horizontalArrangement = Arrangement.spacedBy(8.dp),
-                    ) {
-                        Button(onClick = onAccept, colors = ButtonDefaults.buttonColors(containerColor = ReUAMGreen)) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                OutlinedButton(onClick = onArticleClick, modifier = Modifier.weight(1f)) {
+                    Icon(Icons.Filled.Visibility, contentDescription = null, modifier = Modifier.size(18.dp))
+                    Spacer(Modifier.width(6.dp))
+                    Text("Ver artículo")
+                }
+
+                if (request.status == ExchangeRequestStatus.PENDING) {
+                    if (isProcessing) {
+                        Box(modifier = Modifier.weight(1f), contentAlignment = Alignment.Center) {
+                            CircularProgressIndicator(modifier = Modifier.size(26.dp), strokeWidth = 2.dp)
+                        }
+                    } else if (isReceived) {
+                        Button(
+                            onClick = onAccept,
+                            colors = ButtonDefaults.buttonColors(containerColor = ReUAMGreen),
+                            modifier = Modifier.weight(1f),
+                        ) {
+                            Icon(Icons.Filled.Check, contentDescription = null, modifier = Modifier.size(18.dp))
+                            Spacer(Modifier.width(4.dp))
                             Text("Aceptar")
                         }
                         OutlinedButton(onClick = onReject) {
-                            Text("Rechazar")
+                            Icon(Icons.Filled.Close, contentDescription = null, modifier = Modifier.size(18.dp))
+                        }
+                    } else {
+                        OutlinedButton(onClick = onCancel, modifier = Modifier.weight(1f)) {
+                            Icon(Icons.Filled.Close, contentDescription = null, modifier = Modifier.size(18.dp))
+                            Spacer(Modifier.width(6.dp))
+                            Text("Cancelar")
                         }
                     }
                 }
@@ -218,61 +376,29 @@ private fun ReceivedRequestCard(
 }
 
 @Composable
-private fun SentRequestCard(
-    requestUi: RequestUi,
-    isProcessing: Boolean,
-    onCancel: () -> Unit,
-    onClick: () -> Unit,
-) {
-    Card(
-        onClick = onClick,
-        modifier = Modifier.fillMaxWidth(),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-    ) {
-        Column(modifier = Modifier.padding(16.dp)) {
-            Text(requestUi.itemTitle, style = MaterialTheme.typography.titleMedium)
-            RequestStatusChip(requestUi.request.status)
-
-            if (!requestUi.request.message.isNullOrBlank()) {
-                Text(
-                    text = "Tu mensaje: \"${requestUi.request.message}\"",
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = ReUAMTextSecondary,
-                    modifier = Modifier.padding(top = 8.dp)
-                )
-            }
-
-            if (requestUi.request.status == ExchangeRequestStatus.PENDING) {
-                if (isProcessing) {
-                    CircularProgressIndicator(modifier = Modifier.padding(top = 12.dp))
-                } else {
-                    OutlinedButton(
-                        onClick = onCancel,
-                        modifier = Modifier.padding(top = 12.dp),
-                    ) {
-                        Text("Cancelar solicitud")
-                    }
-                }
-            }
-        }
-    }
-}
-
-@Composable
-private fun RequestStatusChip(status: ExchangeRequestStatus) {
-    val (label, color) = when (status) {
-        ExchangeRequestStatus.PENDING -> "Pendiente" to Color(0xFFF9A825)
-        ExchangeRequestStatus.ACCEPTED -> "Aceptada" to ReUAMGreen
-        ExchangeRequestStatus.REJECTED -> "Rechazada" to Color(0xFFB00020)
-        ExchangeRequestStatus.CANCELLED -> "Cancelada" to Color(0xFF9E9E9E)
-        ExchangeRequestStatus.COMPLETED -> "Completada" to Color(0xFF1565C0)
+private fun RequestStatusPill(status: ExchangeRequestStatus) {
+    val color = statusColor(status)
+    val label = when (status) {
+        ExchangeRequestStatus.PENDING -> "Pendiente"
+        ExchangeRequestStatus.ACCEPTED -> "Aceptada"
+        ExchangeRequestStatus.REJECTED -> "Rechazada"
+        ExchangeRequestStatus.CANCELLED -> "Cancelada"
+        ExchangeRequestStatus.COMPLETED -> "Completada"
     }
     Box(
         modifier = Modifier
-            .padding(top = 4.dp)
-            .background(color.copy(alpha = 0.15f), RoundedCornerShape(8.dp))
-            .padding(horizontal = 10.dp, vertical = 4.dp)
+            .clip(RoundedCornerShape(999.dp))
+            .background(color.copy(alpha = 0.14f))
+            .padding(horizontal = 10.dp, vertical = 5.dp)
     ) {
-        Text(text = label, color = color, style = MaterialTheme.typography.labelMedium)
+        Text(label, style = MaterialTheme.typography.labelSmall, color = color, fontWeight = FontWeight.SemiBold)
     }
+}
+
+private fun statusColor(status: ExchangeRequestStatus) = when (status) {
+    ExchangeRequestStatus.PENDING -> ReUAMAccent
+    ExchangeRequestStatus.ACCEPTED -> ReUAMGreen
+    ExchangeRequestStatus.REJECTED -> ReUAMError
+    ExchangeRequestStatus.CANCELLED -> ReUAMTextSecondary
+    ExchangeRequestStatus.COMPLETED -> ReUAMGreen
 }
