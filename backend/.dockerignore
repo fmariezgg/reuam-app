@@ -1,0 +1,12 @@
+.gradle/
+build/
+.kotlin/
+.idea/
+*.iml
+
+firebase-adminsdk.json
+storage/
+*.mv.db
+*.trace.db
+
+docs/
