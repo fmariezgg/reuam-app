@@ -30,9 +30,14 @@ El backend lee primero variables de entorno y, si no existen, usa los valores de
 
 | Variable | Requerida en produccion | Descripcion |
 | --- | --- | --- |
-| `DATABASE_URL` | Si | URL R2DBC de Postgres. Ejemplo: `r2dbc:postgresql://HOST:5432/reuam` |
-| `DATABASE_USER` | Si | Usuario de la base de datos |
-| `DATABASE_PASSWORD` | Si | Password de la base de datos |
+| `PGHOST` | Si, si usas Railway PostgreSQL | Host del servicio PostgreSQL |
+| `PGPORT` | Si, si usas Railway PostgreSQL | Puerto del servicio PostgreSQL |
+| `PGDATABASE` | Si, si usas Railway PostgreSQL | Nombre de la base de datos |
+| `PGUSER` | Si, si usas Railway PostgreSQL | Usuario de la base de datos |
+| `PGPASSWORD` | Si, si usas Railway PostgreSQL | Password de la base de datos |
+| `DATABASE_URL` | Alternativa | URL R2DBC o URL PostgreSQL. Ejemplo: `r2dbc:postgresql://HOST:5432/reuam` o `postgresql://USER:PASSWORD@HOST:5432/DB` |
+| `DATABASE_USER` | Alternativa | Usuario de la base de datos cuando usas `DATABASE_URL` sin credenciales |
+| `DATABASE_PASSWORD` | Alternativa | Password de la base de datos cuando usas `DATABASE_URL` sin credenciales |
 | `LOCAL_STORAGE_DIR` | No | Carpeta local donde se guardan/leen imagenes. Por defecto: `./storage` |
 | `LOCAL_STORAGE_PUBLIC_BASE_URL` | No | URL publica que Android usa para leer imagenes locales. Por defecto: `http://10.0.2.2:8080` |
 | `FIREBASE_ADMIN_JSON` | Si | Contenido completo del JSON del Firebase Admin SDK. En local tambien puedes usar `firebase-adminsdk.json`. |
@@ -46,7 +51,7 @@ database:
   password: ""
 ```
 
-Para Cloud SQL PostgreSQL o Railway PostgreSQL, configura `DATABASE_URL`, `DATABASE_USER` y `DATABASE_PASSWORD` en el runtime donde despliegues el backend. Si Railway entrega `DATABASE_URL` como `postgresql://USER:PASSWORD@HOST:PORT/DB`, el backend la convierte automaticamente a R2DBC.
+Para Cloud SQL PostgreSQL o Railway PostgreSQL, configura `PGHOST`, `PGPORT`, `PGDATABASE`, `PGUSER` y `PGPASSWORD` en el runtime donde despliegues el backend. Si usas `DATABASE_URL` como `postgresql://USER:PASSWORD@HOST:PORT/DB`, el backend tambien la convierte automaticamente a R2DBC.
 
 ## Deploy En Railway
 
@@ -62,14 +67,33 @@ Y arranca con el puerto dinamico de Railway:
 ./build/install/reuam-app/bin/reuam-app -host=0.0.0.0 -port=$PORT
 ```
 
-Variables recomendadas para Railway:
+Variables recomendadas para Railway con un servicio PostgreSQL conectado:
 
 ```text
+PGHOST=${{Postgres.PGHOST}}
+PGPORT=${{Postgres.PGPORT}}
+PGDATABASE=${{Postgres.PGDATABASE}}
+PGUSER=${{Postgres.PGUSER}}
+PGPASSWORD=${{Postgres.PGPASSWORD}}
 LOCAL_STORAGE_DIR=/data/storage
 FIREBASE_ADMIN_JSON={...contenido del JSON de Firebase Admin SDK...}
 ```
 
-Si usas Railway PostgreSQL, conecta la base y deja disponible `DATABASE_URL`. El backend acepta URLs `postgresql://...`, `postgres://...`, `jdbc:postgresql://...` y `r2dbc:postgresql://...`.
+El backend prioriza esas variables `PG*`. Si prefieres una sola variable, tambien puedes usar:
+
+```text
+DATABASE_URL=${{Postgres.DATABASE_URL}}
+```
+
+El backend acepta URLs `postgresql://...`, `postgres://...`, `jdbc:postgresql://...` y `r2dbc:postgresql://...`.
+
+Si usas H2 temporalmente con un Railway Volume en `/data`, usa una ruta absoluta:
+
+```text
+DATABASE_URL=r2dbc:h2:file:/data/reuam;MODE=PostgreSQL;DATABASE_TO_UPPER=false
+DATABASE_USER=root
+DATABASE_PASSWORD=
+```
 
 Para imagenes, agrega un Railway Volume montado en:
 

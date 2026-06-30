@@ -1,9 +1,0 @@
-[build]
-builder = "NIXPACKS"
-buildCommand = "cd backend && chmod +x gradlew && ./gradlew installDist"
-
-[deploy]
-startCommand = "cd backend && ./build/install/reuam-app/bin/reuam-app -host=0.0.0.0 -port=$PORT"
-healthcheckPath = "/api/v1/health"
-healthcheckTimeout = 120
-restartPolicyType = "ON_FAILURE"

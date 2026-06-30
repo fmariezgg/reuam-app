@@ -59,15 +59,34 @@ private fun Application.databaseConnectionConfig(): DatabaseConnectionConfig {
     val configuredUser = System.getenv("DATABASE_USER")
     val configuredPassword = System.getenv("DATABASE_PASSWORD")
 
+    val railwayPostgresFromPgVars = railwayPostgresConfigFromPgEnvironment()
+    if (railwayPostgresFromPgVars != null) {
+        return railwayPostgresFromPgVars
+    }
+
     val railwayPostgres = rawUrl.toRailwayPostgresConfig()
     return DatabaseConnectionConfig(
-        url = railwayPostgres?.url ?: rawUrl,
+        url = railwayPostgres?.url ?: rawUrl.normalizeH2FileUrl(),
         user = configuredUser
             ?: railwayPostgres?.user?.takeIf { it.isNotBlank() }
             ?: environment.config.property("database.user").getString(),
         password = configuredPassword
             ?: railwayPostgres?.password?.takeIf { it.isNotBlank() }
             ?: environment.config.property("database.password").getString(),
+    )
+}
+
+private fun railwayPostgresConfigFromPgEnvironment(): DatabaseConnectionConfig? {
+    val host = System.getenv("PGHOST")?.takeIf { it.isNotBlank() } ?: return null
+    val port = System.getenv("PGPORT")?.takeIf { it.isNotBlank() } ?: "5432"
+    val database = System.getenv("PGDATABASE")?.takeIf { it.isNotBlank() } ?: return null
+    val user = System.getenv("PGUSER")?.takeIf { it.isNotBlank() } ?: return null
+    val password = System.getenv("PGPASSWORD") ?: ""
+
+    return DatabaseConnectionConfig(
+        url = "r2dbc:postgresql://$host:$port/$database",
+        user = user,
+        password = password,
     )
 }
 
@@ -97,6 +116,13 @@ private fun String.toRailwayPostgresConfig(): DatabaseConnectionConfig? {
         password = password.orEmpty(),
     )
 }
+
+private fun String.normalizeH2FileUrl(): String =
+    when {
+        startsWith("r2dbc:h2:file:data/") -> replaceFirst("r2dbc:h2:file:data/", "r2dbc:h2:file:/data/")
+        startsWith("r2dbc:h2:file:backend/data/") -> replaceFirst("r2dbc:h2:file:backend/data/", "r2dbc:h2:file:/data/")
+        else -> this
+    }
 
 private fun String.decodeUrl(): String =
     URLDecoder.decode(this, Charsets.UTF_8)

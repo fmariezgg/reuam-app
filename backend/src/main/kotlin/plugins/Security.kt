@@ -7,9 +7,11 @@ import com.kborowy.authprovider.firebase.firebase
 import ni.uam.edu.models.AuthenticatedUser
 import java.io.File
 import java.nio.file.Files
+import java.util.Base64
 
 const val FIREBASE_AUTH_PROVIDER = "firebase"
 private const val FIREBASE_ADMIN_JSON_ENV = "FIREBASE_ADMIN_JSON"
+private const val FIREBASE_ADMIN_JSON_B64_ENV = "FIREBASE_ADMIN_JSON_B64"
 
 fun Application.configureSecurity() {
     val adminFile = resolveFirebaseAdminFile()
@@ -48,9 +50,7 @@ fun Application.configureSecurity() {
 }
 
 private fun resolveFirebaseAdminFile(): File? {
-    val jsonFromEnv = System.getenv(FIREBASE_ADMIN_JSON_ENV)
-        ?.trim()
-        ?.takeIf { it.isNotEmpty() }
+    val jsonFromEnv = resolveFirebaseAdminJsonFromEnvironment()
 
     if (jsonFromEnv != null) {
         val tempFile = Files.createTempFile("firebase-adminsdk", ".json").toFile()
@@ -61,3 +61,37 @@ private fun resolveFirebaseAdminFile(): File? {
 
     return File("firebase-adminsdk.json").takeIf { it.exists() }
 }
+
+private fun resolveFirebaseAdminJsonFromEnvironment(): String? {
+    val base64Json = System.getenv(FIREBASE_ADMIN_JSON_B64_ENV)
+        ?.trim()
+        ?.takeIf { it.isNotEmpty() }
+
+    if (base64Json != null) {
+        return decodeBase64Json(base64Json)
+    }
+
+    val rawJson = System.getenv(FIREBASE_ADMIN_JSON_ENV)
+        ?.trim()
+        ?.takeIf { it.isNotEmpty() }
+        ?: return null
+
+    if (rawJson.startsWith("{")) return rawJson
+
+    val unquoted = rawJson
+        .takeIf { it.length >= 2 && it.first() == '"' && it.last() == '"' }
+        ?.substring(1, rawJson.lastIndex)
+        ?.replace("\\\"", "\"")
+        ?.replace("\\n", "\n")
+
+    if (unquoted?.trimStart()?.startsWith("{") == true) {
+        return unquoted
+    }
+
+    return runCatching { decodeBase64Json(rawJson) }.getOrElse {
+        rawJson
+    }
+}
+
+private fun decodeBase64Json(value: String): String =
+    String(Base64.getDecoder().decode(value), Charsets.UTF_8)
