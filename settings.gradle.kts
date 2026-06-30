@@ -23,4 +23,13 @@ dependencyResolutionManagement {
 }
 
 rootProject.name = "ReUAM"
-include(":mobile-app")
+
+val isRailwayBuild = System.getenv("RAILWAY_ENVIRONMENT") != null ||
+    System.getenv("RAILWAY_PROJECT_ID") != null ||
+    System.getenv("RAILWAY_SERVICE_ID") != null
+
+if (isRailwayBuild) {
+    includeBuild("backend")
+} else {
+    include(":mobile-app")
+}

@@ -1,0 +1,5 @@
+[phases.build]
+cmds = ["cd backend && chmod +x gradlew && ./gradlew installDist"]
+
+[start]
+cmd = "cd backend && ./build/install/reuam-app/bin/reuam-app -host=0.0.0.0 -port=$PORT"
